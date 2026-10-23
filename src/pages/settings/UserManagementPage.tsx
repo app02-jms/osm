@@ -32,7 +32,9 @@ import {
 } from 'lucide-react';
 
 const PERMISSION_LEVELS: PermissionLevel[] = ['hidden', 'view', 'update', 'approve', 'delete'];
-const MODULES: FeatureModule[] = ['hrm', 'frontdesk', 'housekeeping', 'inventory', 'sales', 'system'];
+const ALL_MODULES: FeatureModule[] = ['hrm', 'frontdesk', 'housekeeping', 'inventory', 'sales', 'system'];
+// Operational modules only — 'system' is super-admin-exclusive and never exposed to hotel staff
+const HOTEL_MODULES: FeatureModule[] = ['hrm', 'frontdesk', 'housekeeping', 'inventory', 'sales'];
 
 const LEVEL_RANK: Record<PermissionLevel, number> = { hidden: 0, view: 1, update: 2, approve: 3, delete: 4 };
 
@@ -44,7 +46,7 @@ interface HotelAssignment {
 
 function defaultPermissionsForRole(role: HotelRole): Record<FeatureModule, PermissionLevel> {
   const base = role === 'hotel_admin' ? { ...HOTEL_ADMIN_PERMISSIONS } : { ...STAFF_PERMISSIONS };
-  return MODULES.reduce((acc, m) => {
+  return ALL_MODULES.reduce((acc, m) => {
     acc[m] = base[m] ?? 'hidden';
     return acc;
   }, {} as Record<FeatureModule, PermissionLevel>);
@@ -76,7 +78,7 @@ function UserFormModal({
       return existingMappings.map((m) => ({
         hotel_id: m.hotel_id,
         role: m.role,
-        permissions: MODULES.reduce((acc, mod) => {
+        permissions: ALL_MODULES.reduce((acc, mod) => {
           acc[mod] = m.permissions[mod] ?? 'hidden';
           return acc;
         }, {} as Record<FeatureModule, PermissionLevel>),
@@ -227,7 +229,7 @@ function UserFormModal({
                       </Select>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      {MODULES.map((m) => (
+                      {(isSuperAdminActor ? ALL_MODULES : HOTEL_MODULES).map((m) => (
                         <div key={m} className="flex items-center justify-between gap-2">
                           <span className="text-xs text-info">{MODULE_LABELS[m]}</span>
                           <Select

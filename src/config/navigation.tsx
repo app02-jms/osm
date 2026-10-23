@@ -25,13 +25,13 @@ import {
   Hotel,
   type LucideIcon,
 } from 'lucide-react';
-interface NavChildItem {
+export interface NavChildItem {
   label: string;
   path: string;
   icon: LucideIcon;
 }
 
-interface NavConfigItem {
+export interface NavConfigItem {
   module: string;
   label: string;
   icon: LucideIcon;

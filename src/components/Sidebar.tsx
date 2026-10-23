@@ -1,11 +1,16 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from '@/router/RouterContext';
-import { NAVIGATION } from '@/config/navigation';
+import { useAuth } from '@/auth/AuthContext';
+import { NAVIGATION, type NavConfigItem, type NavChildItem } from '@/config/navigation';
 import { ChevronDown } from 'lucide-react';
 import { Logo } from '@/components/common/Logo';
 
+const SUPER_ADMIN_ONLY_PATHS = new Set(['/system/hotel-config']);
+
 export default function Sidebar() {
   const { path, navigate } = useRouter();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.is_super_admin === true;
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     // Auto-expand the module containing the current path
     const initial = new Set<string>();
@@ -30,6 +35,16 @@ export default function Sidebar() {
     navigate(to);
   };
 
+  // Filter nav items: hide super-admin-only routes from non-super-admins
+  const visibleNav = useMemo<NavConfigItem[]>(() => {
+    return NAVIGATION.map((nav) => ({
+      ...nav,
+      children: nav.children.filter((c: NavChildItem) =>
+        isSuperAdmin || !SUPER_ADMIN_ONLY_PATHS.has(c.path)
+      ),
+    })).filter((nav) => nav.children.length > 0);
+  }, [isSuperAdmin]);
+
   return (
     <aside className="w-64 shrink-0 bg-ink h-full flex flex-col">
       {/* Brand */}
@@ -43,7 +58,7 @@ export default function Sidebar() {
 
       {/* Nav items */}
       <nav className="flex-1 overflow-y-auto sidebar-scroll py-3 px-2">
-        {NAVIGATION.map((nav) => {
+        {visibleNav.map((nav) => {
           const isOpen = expanded.has(nav.module);
           const Icon = nav.icon;
           const hasActiveChild = nav.children.some(

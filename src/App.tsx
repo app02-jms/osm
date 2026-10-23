@@ -5,6 +5,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import LoginPage from '@/pages/LoginPage';
 import AppLayout from '@/components/AppLayout';
 import GenericPage from '@/pages/GenericPage';
+import { Shield } from 'lucide-react';
 import { ROUTES } from '@/config/routes';
 import HrmConfigPage from '@/pages/hrm/HrmConfigPage';
 import EmployeesPage from '@/pages/hrm/EmployeesPage';
@@ -81,8 +82,10 @@ function Dashboard() {
   );
 }
 
+const SUPER_ADMIN_ONLY_ROUTES = new Set(['/system/hotel-config']);
+
 function AppContent() {
-  const { isAuthenticated, needsHotelSelection } = useAuth();
+  const { isAuthenticated, needsHotelSelection, user } = useAuth();
   const { path, navigate } = useRouter();
   const [activeTabs, setActiveTabs] = useState<Record<string, string>>({});
 
@@ -95,6 +98,40 @@ function AppContent() {
   // Authenticated but no hotel selected — show hotel selection screen
   if (needsHotelSelection) {
     return <HotelSelectionScreen />;
+  }
+
+  // Route guard: block non-super-admins from accessing super-admin-only routes
+  if (SUPER_ADMIN_ONLY_ROUTES.has(path) && user?.is_super_admin !== true) {
+    return (
+      <AppLayout>
+        <div className="px-8 pt-6 pb-8">
+          <div className="mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-danger/10 flex items-center justify-center shrink-0">
+                <Shield className="w-5 h-5 text-danger" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-ink leading-tight">Không có quyền truy cập</h1>
+                <p className="text-sm text-info mt-0.5">Bạn không có quyền truy cập vào trang này.</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-card rounded-xl border border-line/30 p-6">
+            <div className="flex flex-col items-center gap-4 py-8">
+              <p className="text-sm text-info text-center max-w-md">
+                Bạn không có quyền truy cập vào Cấu hình Khách sạn Hệ thống. Vui lòng liên hệ Super Admin nếu cần hỗ trợ.
+              </p>
+              <button
+                onClick={() => navigate('/hrm/timesheet')}
+                className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-dark transition-colors"
+              >
+                Về trang chính
+              </button>
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
   }
 
   // Custom page implementation
