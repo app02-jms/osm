@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useRouter } from '@/router/RouterContext';
 import { NAVIGATION } from '@/config/navigation';
 import { ChevronDown } from 'lucide-react';
-import { JeniusLogo } from '@/components/JeniusLogo';
+import { Logo } from '@/components/common/Logo';
 
 export default function Sidebar() {
   const { path, navigate } = useRouter();
@@ -34,7 +34,7 @@ export default function Sidebar() {
     <aside className="w-64 shrink-0 bg-ink h-full flex flex-col">
       {/* Brand */}
       <div className="h-16 flex items-center gap-2.5 px-5 border-b border-white/10">
-        <JeniusLogo className="w-9 h-9 shrink-0" />
+        <Logo className="w-9 h-9 shrink-0" />
         <div className="min-w-0">
           <p className="text-white font-bold text-sm leading-tight truncate">OMS by Jenius</p>
           <p className="text-white/50 text-[10px] leading-tight">Hotel Management</p>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
-import { JeniusLogo } from '@/components/JeniusLogo';
+import { Logo } from '@/components/common/Logo';
 import { Lock, User as UserIcon, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
@@ -34,7 +34,7 @@ export default function LoginPage() {
         {/* Logo & Title */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
-            <JeniusLogo className="w-16 h-16" />
+            <Logo className="w-16 h-16" />
           </div>
           <h1 className="text-3xl font-bold text-ink tracking-tight">{('OMS by Jenius' || '').toUpperCase()}</h1>
           <p className="text-sm text-info mt-2">Hotel Operations Management System</p>

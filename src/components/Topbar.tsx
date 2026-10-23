@@ -1,5 +1,5 @@
 import { useAuth } from '@/auth/AuthContext';
-import { JeniusLogo } from '@/components/JeniusLogo';
+import { Logo } from '@/components/common/Logo';
 import { Circle, LogOut, User as UserIcon } from 'lucide-react';
 
 export default function Topbar() {
@@ -10,7 +10,7 @@ export default function Topbar() {
       {/* Brand & status badge */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <JeniusLogo className="w-7 h-7 shrink-0" />
+          <Logo className="w-7 h-7 shrink-0" />
           <span className="text-sm font-bold text-ink tracking-tight hidden md:inline">{('OMS by Jenius' || '').toUpperCase()}</span>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10 border border-success/20">

@@ -1,21 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="OMS by Jenius">
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OMS by Jenius">
   <title>OMS by Jenius</title>
   <defs>
-    <linearGradient id="jenius-j-grad" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+    <linearGradient id="j-grad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#FF7E36" />
       <stop offset="50%" stop-color="#FF3E3D" />
       <stop offset="100%" stop-color="#C8102E" />
     </linearGradient>
-    <linearGradient id="jenius-bar-grad" x1="8" y1="56" x2="56" y2="8" gradientUnits="userSpaceOnUse">
+    <linearGradient id="bar-grad" x1="0%" y1="100%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#4A154B" />
       <stop offset="50%" stop-color="#8A2BE2" />
       <stop offset="100%" stop-color="#E024A2" />
     </linearGradient>
   </defs>
-  <path d="M32 4 L56 18 L56 46 L32 60 L8 46 L8 18 Z" fill="url(#jenius-j-grad)" opacity="0.95" />
-  <g fill="url(#jenius-bar-grad)">
-    <rect x="20" y="32" width="6" height="16" rx="1.5" />
-    <rect x="29" y="24" width="6" height="24" rx="1.5" />
-    <rect x="38" y="16" width="6" height="32" rx="1.5" />
-  </g>
+  <path d="M90 12 H40 C20 12 8 28 8 50 C8 75 28 92 55 92 C78 92 90 75 90 50 L90 20 H80 L80 50 C80 68 70 82 53 82 C34 82 20 68 20 50 C20 33 30 22 45 22 H90 V12 Z" fill="url(#j-grad)" />
+  <rect x="28" y="52" width="9" height="20" rx="2" transform="rotate(-15 28 52)" fill="url(#bar-grad)" />
+  <rect x="42" y="40" width="10" height="32" rx="2" transform="rotate(-15 42 40)" fill="url(#bar-grad)" />
+  <rect x="57" y="28" width="11" height="44" rx="2" transform="rotate(-15 57 28)" fill="url(#bar-grad)" />
 </svg>
