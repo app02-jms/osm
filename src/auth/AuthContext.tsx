@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Session, User, Hotel } from '@/types/auth';
 import { getUsers, getUserHotelAccess, getHotelById, getActiveHotelId, setActiveHotelId, getHotels } from '@/store/authStore';
 
@@ -7,6 +7,7 @@ interface AuthContextValue {
   user: User | null;
   activeHotel: Hotel | null;
   hotels: Hotel[];
+  needsHotelSelection: boolean;
   login: (username: string, password: string) => { ok: boolean; needsHotelSelect: boolean; hotels: Hotel[] };
   selectHotel: (hotelId: string) => void;
   switchHotel: (hotelId: string) => void;
@@ -15,7 +16,7 @@ interface AuthContextValue {
 }
 
 const STORAGE_KEY = 'oms_session';
-const SESSION_DURATION = 60 * 60 * 1000; // 60 minutes
+const SESSION_DURATION = 60 * 60 * 1000;
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -39,6 +40,7 @@ const INITIAL_SESSION = loadSession();
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(INITIAL_SESSION);
+  const [needsHotelSelection, setNeedsHotelSelection] = useState(false);
 
   const login = (username: string, password: string): { ok: boolean; needsHotelSelect: boolean; hotels: Hotel[] } => {
     const users = getUsers();
@@ -52,47 +54,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .map((a) => getHotelById(a.hotel_id))
       .filter((h): h is Hotel => h !== undefined);
 
-    if (userHotels.length === 0 && !user.is_super_admin) {
+    // Super admin with no explicit mappings gets access to all hotels
+    const effectiveHotels = userHotels.length > 0 ? userHotels : (user.is_super_admin ? getHotels() : []);
+
+    if (effectiveHotels.length === 0) {
       return { ok: false, needsHotelSelect: false, hotels: [] };
     }
 
-    // Super admin with no mappings gets access to all hotels
-    if (userHotels.length === 0 && user.is_super_admin) {
-      const allHotels = getHotels();
-      if (allHotels.length === 1) {
-        const newSession: Session = {
-          userId: user.id,
-          username: user.username,
-          full_name: user.full_name,
-          is_super_admin: user.is_super_admin,
-          activeHotelId: allHotels[0].id,
-          expiresAt: Date.now() + SESSION_DURATION,
-        };
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession)); } catch { /* ignore */ }
-        setActiveHotelId(allHotels[0].id);
-        setSession(newSession);
-        return { ok: true, needsHotelSelect: false, hotels: allHotels };
-      }
-      return { ok: true, needsHotelSelect: true, hotels: allHotels };
-    }
-
-    if (userHotels.length === 1) {
+    // Single hotel — auto-select
+    if (effectiveHotels.length === 1) {
       const newSession: Session = {
         userId: user.id,
         username: user.username,
         full_name: user.full_name,
         is_super_admin: user.is_super_admin,
-        activeHotelId: userHotels[0].id,
+        activeHotelId: effectiveHotels[0].id,
         expiresAt: Date.now() + SESSION_DURATION,
       };
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession)); } catch { /* ignore */ }
-      setActiveHotelId(userHotels[0].id);
+      setActiveHotelId(effectiveHotels[0].id);
+      setNeedsHotelSelection(false);
       setSession(newSession);
-      return { ok: true, needsHotelSelect: false, hotels: userHotels };
+      return { ok: true, needsHotelSelect: false, hotels: effectiveHotels };
     }
 
-    // Multiple hotels — need selection
-    return { ok: true, needsHotelSelect: true, hotels: userHotels };
+    // Multiple hotels — create session with no hotel selected yet
+    const partialSession: Session = {
+      userId: user.id,
+      username: user.username,
+      full_name: user.full_name,
+      is_super_admin: user.is_super_admin,
+      activeHotelId: null,
+      expiresAt: Date.now() + SESSION_DURATION,
+    };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(partialSession)); } catch { /* ignore */ }
+    setNeedsHotelSelection(true);
+    setSession(partialSession);
+    return { ok: true, needsHotelSelect: true, hotels: effectiveHotels };
   };
 
   const selectHotel = (hotelId: string) => {
@@ -100,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const newSession: Session = { ...session, activeHotelId: hotelId };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession)); } catch { /* ignore */ }
     setActiveHotelId(hotelId);
+    setNeedsHotelSelection(false);
     setSession(newSession);
   };
 
@@ -116,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem('oms_active_hotel_id');
     } catch { /* ignore */ }
+    setNeedsHotelSelection(false);
     setSession(null);
   };
 
@@ -123,7 +123,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!session) return;
     const interval = setInterval(() => {
       const stored = loadSession();
-      if (!stored) setSession(null);
+      if (!stored) {
+        setNeedsHotelSelection(false);
+        setSession(null);
+      }
     }, 30 * 1000);
     return () => clearInterval(interval);
   }, [session]);
@@ -132,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const user = session ? getUsers().find((u) => u.id === session.userId) ?? null : null;
 
   const accessRecords = user ? getUserHotelAccess(user.id) : [];
-  const hotels = accessRecords
+  const mappedHotels = accessRecords
     .map((a) => getHotelById(a.hotel_id))
     .filter((h): h is Hotel => h !== undefined);
   const activeHotel = session?.activeHotelId ? getHotelById(session.activeHotelId) ?? null : null;
@@ -141,7 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     user,
     activeHotel,
-    hotels: user?.is_super_admin ? getHotels() : hotels,
+    hotels: user?.is_super_admin ? getHotels() : mappedHotels,
+    needsHotelSelection,
     login,
     selectHotel,
     switchHotel,

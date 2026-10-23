@@ -16,6 +16,7 @@ import ApprovalsPage from '@/pages/hrm/ApprovalsPage';
 import PayrollPage from '@/pages/hrm/PayrollPage';
 import UserManagementPage from '@/pages/settings/UserManagementPage';
 import HotelConfigPage from '@/pages/system/HotelConfigPage';
+import HotelSelectionScreen from '@/pages/HotelSelectionScreen';
 
 // Map of routes that have custom page implementations
 const CUSTOM_PAGES: Record<string, React.ComponentType> = {
@@ -81,7 +82,7 @@ function Dashboard() {
 }
 
 function AppContent() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, needsHotelSelection } = useAuth();
   const { path, navigate } = useRouter();
   const [activeTabs, setActiveTabs] = useState<Record<string, string>>({});
 
@@ -89,6 +90,11 @@ function AppContent() {
 
   if (!isAuthenticated) {
     return <LoginPage />;
+  }
+
+  // Authenticated but no hotel selected — show hotel selection screen
+  if (needsHotelSelection) {
+    return <HotelSelectionScreen />;
   }
 
   // Custom page implementation
