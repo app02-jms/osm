@@ -100,3 +100,41 @@ export interface ApprovalRequest {
   reviewed_by: string | null;
   reviewed_at: string | null;
 }
+
+export type ClosureStatus = 'draft' | 'locked';
+export type OTApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type WorkerConfirmation = 'pending' | 'confirmed' | 'disputed';
+
+export interface EmployeeSummary {
+  employee_id: string;
+  total_work_days: number;
+  total_leave_days: number;
+  raw_ot_hours: number;
+  approved_ot_hours: number;
+  ot_approval_status: OTApprovalStatus;
+  worker_confirmation: WorkerConfirmation;
+  dispute_reason: string;
+}
+
+export interface DailyBreakdownEntry {
+  date: string;
+  shift_id: string | null;
+  actual_shift_id: string | null;
+  clock_in: string | null;
+  clock_out: string | null;
+  worked_hours: number;
+  daily_ot_hours: number;
+  has_long_shift_warning: boolean;
+}
+
+export interface TimesheetClosure {
+  id: string;
+  period_name: string;
+  start_date: string;
+  end_date: string;
+  lock_deadline: string;
+  status: ClosureStatus;
+  employee_summaries: EmployeeSummary[];
+  created_at: string;
+  locked_at: string | null;
+}

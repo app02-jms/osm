@@ -11,7 +11,7 @@ export default function Topbar() {
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <Logo className="w-7 h-7 shrink-0" />
-          <span className="text-sm font-bold text-ink tracking-tight hidden md:inline">{('OMS by Jenius' || '').toUpperCase()}</span>
+          <span className="text-sm font-bold text-ink tracking-tight hidden md:inline">OMS BY JENIUS</span>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10 border border-success/20">
           <Circle className="w-2 h-2 fill-success text-success animate-pulse" />

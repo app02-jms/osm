@@ -9,6 +9,8 @@ import type {
   HrmSettings,
   AttendanceLog,
   ApprovalRequest,
+  TimesheetClosure,
+  DailyBreakdownEntry,
 } from './types';
 
 // ── Storage Keys ──────────────────────────────────────────────
@@ -21,6 +23,7 @@ const K_SCHEDULES = 'oms_hrm_schedules';
 const K_LEAVE = 'oms_hrm_leave_ledger';
 const K_ATTENDANCE = 'oms_hrm_attendance_logs';
 const K_APPROVALS = 'oms_hrm_approval_requests';
+const K_CLOSURES = 'oms_hrm_timesheet_closures';
 
 // ── Default Seed Data ─────────────────────────────────────────
 const DEFAULT_SETTINGS: HrmSettings = {
@@ -130,6 +133,7 @@ const schedulesStore = new SimpleStore<Schedule[]>(K_SCHEDULES, []);
 const leaveStore = new SimpleStore<LeaveEntry[]>(K_LEAVE, []);
 const attendanceStore = new SimpleStore<AttendanceLog[]>(K_ATTENDANCE, []);
 const approvalStore = new SimpleStore<ApprovalRequest[]>(K_APPROVALS, []);
+const closuresStore = new SimpleStore<TimesheetClosure[]>(K_CLOSURES, []);
 
 // ── Hooks ─────────────────────────────────────────────────────
 export function useHrmSettings(): [HrmSettings, (updater: (prev: HrmSettings) => HrmSettings) => void] {
@@ -184,6 +188,79 @@ export function useApprovalRequests(): [ApprovalRequest[], (updater: (prev: Appr
   const value = useSyncExternalStore(approvalStore.subscribe, approvalStore.getSnapshot);
   const update = (updater: (prev: ApprovalRequest[]) => ApprovalRequest[]) => approvalStore.set(updater);
   return [value, update];
+}
+
+// ── Timesheet closures ──────────────────────────────────────
+export function useClosures(): [TimesheetClosure[], (updater: (prev: TimesheetClosure[]) => TimesheetClosure[]) => void] {
+  const value = useSyncExternalStore(closuresStore.subscribe, closuresStore.getSnapshot);
+  const update = (updater: (prev: TimesheetClosure[]) => TimesheetClosure[]) => closuresStore.set(updater);
+  return [value, update];
+}
+
+// ── Overtime calculation ─────────────────────────────────────
+// Overtime Rule: any daily worked time beyond 10 hours is flagged as OT.
+const OT_THRESHOLD_HOURS = 10;
+
+function timeStrToMinutes(t: string | null | undefined): number {
+  if (!t) return -1;
+  const parts = t.split(':');
+  if (parts.length < 2) return -1;
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return -1;
+  return h * 60 + m;
+}
+
+/**
+ * Computes worked hours from clock-in/out strings.
+ * Handles overnight shifts (clock_out < clock_in) by wrapping past midnight.
+ * Returns 0 if either time is missing.
+ */
+export function computeWorkedHours(clockIn: string | null, clockOut: string | null): number {
+  const ci = timeStrToMinutes(clockIn);
+  const co = timeStrToMinutes(clockOut);
+  if (ci < 0 || co < 0) return 0;
+  let diff = co - ci;
+  if (diff < 0) diff += 1440; // overnight wrap
+  return Math.round((diff / 60) * 100) / 100;
+}
+
+/**
+ * Computes OT hours for a single day: max(0, worked_hours - 10).
+ */
+export function computeDailyOTHours(clockIn: string | null, clockOut: string | null): number {
+  const worked = computeWorkedHours(clockIn, clockOut);
+  const ot = Math.max(0, worked - OT_THRESHOLD_HOURS);
+  return Math.round(ot * 100) / 100;
+}
+
+/**
+ * Build a per-day breakdown for one employee within a date range.
+ */
+export function buildDailyBreakdown(
+  logs: AttendanceLog[],
+  employeeId: string,
+  startDate: string,
+  endDate: string
+): DailyBreakdownEntry[] {
+  const empLogs = logs
+    .filter((l) => l.employee_id === employeeId && l.date >= startDate && l.date <= endDate)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  return empLogs.map((l) => {
+    const worked = computeWorkedHours(l.clock_in, l.clock_out);
+    const ot = Math.max(0, worked - OT_THRESHOLD_HOURS);
+    return {
+      date: l.date,
+      shift_id: l.shift_id,
+      actual_shift_id: l.actual_shift_id,
+      clock_in: l.clock_in,
+      clock_out: l.clock_out,
+      worked_hours: Math.round(worked * 100) / 100,
+      daily_ot_hours: Math.round(ot * 100) / 100,
+      has_long_shift_warning: worked > OT_THRESHOLD_HOURS,
+    };
+  });
 }
 
 // ── ID generator ──────────────────────────────────────────────

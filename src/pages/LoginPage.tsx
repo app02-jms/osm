@@ -36,7 +36,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
             <Logo className="w-16 h-16" />
           </div>
-          <h1 className="text-3xl font-bold text-ink tracking-tight">{('OMS by Jenius' || '').toUpperCase()}</h1>
+          <h1 className="text-3xl font-bold text-ink tracking-tight">OMS BY JENIUS</h1>
           <p className="text-sm text-info mt-2">Hotel Operations Management System</p>
         </div>
 
