@@ -1,0 +1,138 @@
+import { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from '@/auth/AuthContext';
+import { RouterProvider, useRouter } from '@/router/RouterContext';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import LoginPage from '@/pages/LoginPage';
+import AppLayout from '@/components/AppLayout';
+import GenericPage from '@/pages/GenericPage';
+import { ROUTES } from '@/config/routes';
+import HrmConfigPage from '@/pages/hrm/HrmConfigPage';
+import EmployeesPage from '@/pages/hrm/EmployeesPage';
+import SchedulePage from '@/pages/hrm/SchedulePage';
+import LeavePage from '@/pages/hrm/LeavePage';
+import AttendancePage from '@/pages/hrm/AttendancePage';
+import TimesheetPage from '@/pages/hrm/TimesheetPage';
+import ApprovalsPage from '@/pages/hrm/ApprovalsPage';
+
+// Map of routes that have custom page implementations
+const CUSTOM_PAGES: Record<string, React.ComponentType> = {
+  '/hrm/config': HrmConfigPage,
+  '/hrm/employees': EmployeesPage,
+  '/hrm/schedule': SchedulePage,
+  '/hrm/leave': LeavePage,
+  '/hrm/attendance': AttendancePage,
+  '/hrm/timesheet': TimesheetPage,
+  '/hrm/approvals': ApprovalsPage,
+};
+
+// Preload SheetJS CDN script on mount so schedule import/export is ready
+function usePreloadXLSX() {
+  useEffect(() => {
+    if ((window as any).XLSX) return;
+    const existing = document.querySelector('script[data-xlsx-cdn]');
+    if (existing) return;
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    script.setAttribute('data-xlsx-cdn', 'true');
+    script.async = true;
+    document.head.appendChild(script);
+  }, []);
+}
+
+function Dashboard() {
+  return (
+    <div className="px-8 pt-6 pb-8">
+      <div className="mb-6">
+        <nav className="flex items-center gap-1.5 text-xs font-medium text-info mb-2">
+          <span>HRM</span>
+        </nav>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <span className="text-primary text-lg font-bold">J</span>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-ink leading-tight">Tổng quan</h1>
+            <p className="text-sm text-info mt-0.5">Chào mừng trở lại hệ thống OMS by Jenius.</p>
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Nhân viên', value: '5', hint: 'Đang làm việc' },
+          { label: 'Ca hôm nay', value: '3', hint: 'Ca Sáng / Chiều / Đêm' },
+          { label: 'Số phép TB', value: '12.0', hint: 'Ngày / nhân viên' },
+          { label: 'Bộ phận', value: '4', hint: 'Lễ tân, Buồng, Bếp, Bảo trì' },
+        ].map((card) => (
+          <div key={card.label} className="bg-card rounded-xl border border-line/30 p-5">
+            <p className="text-xs font-medium text-info mb-1">{card.label}</p>
+            <p className="text-2xl font-bold text-ink">{card.value}</p>
+            <p className="text-xs text-line mt-0.5">{card.hint}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AppContent() {
+  const { isAuthenticated } = useAuth();
+  const { path, navigate } = useRouter();
+  const [activeTabs, setActiveTabs] = useState<Record<string, string>>({});
+
+  usePreloadXLSX();
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
+  // Custom page implementation
+  const CustomPage = CUSTOM_PAGES[path];
+  if (CustomPage) {
+    return (
+      <AppLayout>
+        <CustomPage />
+      </AppLayout>
+    );
+  }
+
+  const route = ROUTES[path];
+  if (!route) {
+    // Catch-all fallback: render Dashboard for any unknown path
+    return (
+      <AppLayout>
+        <Dashboard />
+      </AppLayout>
+    );
+  }
+
+  const activeTabKey = activeTabs[route.path] ?? route.tabs?.[0]?.key ?? '';
+
+  return (
+    <AppLayout>
+      <GenericPage
+        path={route.path}
+        icon={route.icon}
+        title={route.title}
+        subtitle={route.subtitle}
+        description={route.description}
+        tabs={route.tabs}
+        activeTab={activeTabKey}
+        onTabChange={(key) =>
+          setActiveTabs((prev) => ({ ...prev, [route.path]: key }))
+        }
+      />
+    </AppLayout>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <RouterProvider>
+          <AppContent />
+        </RouterProvider>
+      </AuthProvider>
+    </ErrorBoundary>
+  );
+}
