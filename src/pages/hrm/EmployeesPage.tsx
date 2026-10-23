@@ -3,6 +3,7 @@ import { useEmployees, useDepartments, useWorkStatuses, nextEmployeeCode, genId 
 import type { Employee } from '@/hrm/types';
 import { Field, TextInput, Select, Toggle, Button, Badge } from '@/components/ui';
 import { Users, Plus, Pencil, Trash2, Search, Save, Phone, Calendar, Briefcase } from 'lucide-react';
+import { localDateStr } from '@/hrm/dateUtils';
 
 const TABS = [
   { key: 'all', label: 'Tất cả' },
@@ -54,7 +55,7 @@ export default function EmployeesPage() {
     department_id: departments[0]?.id ?? '',
     job_title: '',
     phone: '',
-    start_date: new Date().toISOString().slice(0, 10),
+    start_date: localDateStr(),
     status_id: statuses[0]?.id ?? '',
     has_leave: true,
     opening_leave_balance: 12,

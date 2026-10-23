@@ -19,9 +19,10 @@ import {
   CheckCircle2,
   CalendarClock,
 } from 'lucide-react';
+import { localDateStr } from '@/hrm/dateUtils';
 
 function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDateStr();
 }
 
 function nowHHmm(): string {

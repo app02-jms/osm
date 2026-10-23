@@ -91,16 +91,19 @@ export default function ApprovalsPage() {
       )
     );
 
-    // Overwrite the schedule entry for that date with the adjusted shift
+    // Overwrite the schedule entry for the exact clock-in date.
+    // Use the raw date string from the attendance log (already local YYYY-MM-DD)
+    // — never derive a new date via toISOString() which shifts after 17:00 UTC+7.
     const log = getLog(req.attendance_id);
     if (log) {
+      const targetDate = log.date;
       setSchedules((prev) => {
         const existing = prev.find(
-          (s) => s.employee_id === log.employee_id && s.work_date === log.date
+          (s) => s.employee_id === log.employee_id && s.work_date === targetDate
         );
         if (existing) {
           return prev.map((s) =>
-            s.employee_id === log.employee_id && s.work_date === log.date
+            s.employee_id === log.employee_id && s.work_date === targetDate
               ? { ...s, shift_id: adjustedId }
               : s
           );
@@ -109,7 +112,7 @@ export default function ApprovalsPage() {
           ...prev,
           {
             employee_id: log.employee_id,
-            work_date: log.date,
+            work_date: targetDate,
             shift_id: adjustedId,
             import_id: null,
           },

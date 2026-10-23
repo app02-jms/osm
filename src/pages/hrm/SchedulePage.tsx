@@ -3,12 +3,13 @@ import { useSchedules, useShifts, useEmployees, useWorkStatuses, getSchedulableE
 import type { Schedule } from '@/hrm/types';
 import { Button, Badge } from '@/components/ui';
 import { CalendarDays, Download, Upload, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, FileSpreadsheet, Save } from 'lucide-react';
+import { localDateStr } from '@/hrm/dateUtils';
 
 const DAY_NAMES = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
 const DAY_SHORT = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
 function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return localDateStr(d);
 }
 
 function formatDateDisplay(d: Date): string {

@@ -3,6 +3,7 @@ import { useLeaveLedger, useEmployees, useHrmSettings, genId, getLeaveBalance } 
 import type { LeaveEntry, LeaveEntryType } from '@/hrm/types';
 import { Button, Badge, Select, TextInput, Field } from '@/components/ui';
 import { BookOpen, Plus, Save, TrendingUp, TrendingDown, Minus, PlusCircle, Wallet } from 'lucide-react';
+import { localDateStr } from '@/hrm/dateUtils';
 
 const TYPE_CONFIG: Record<LeaveEntryType, { label: string; color: 'primary' | 'success' | 'danger' | 'info'; sign: string }> = {
   opening: { label: 'Mở đầu', color: 'info', sign: '·' },
@@ -37,7 +38,7 @@ export default function LeavePage() {
     const entry: LeaveEntry = {
       id: genId('l_'),
       employee_id: currentEmpId,
-      entry_date: new Date().toISOString().slice(0, 10),
+      entry_date: localDateStr(),
       type: 'manual',
       days,
       note,

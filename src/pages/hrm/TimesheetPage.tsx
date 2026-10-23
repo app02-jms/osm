@@ -3,9 +3,10 @@ import { useAttendanceLogs, useApprovalRequests, useEmployees, useShifts } from 
 import type { AttendanceLog, AttendanceStatus } from '@/hrm/types';
 import { Badge, Select, TextInput } from '@/components/ui';
 import { CalendarCheck, Search, MapPin } from 'lucide-react';
+import { localDateStr } from '@/hrm/dateUtils';
 
 function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return localDateStr(d);
 }
 
 function formatDateDisplay(dateStr: string): string {
