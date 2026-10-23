@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
-import { Hotel, Lock, User as UserIcon, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { JeniusLogo } from '@/components/JeniusLogo';
+import { Lock, User as UserIcon, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -32,10 +33,10 @@ export default function LoginPage() {
       <div className="relative w-full max-w-md">
         {/* Logo & Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary shadow-lg shadow-primary/30 mb-4">
-            <Hotel className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
+            <JeniusLogo className="w-16 h-16" />
           </div>
-          <h1 className="text-3xl font-bold text-ink tracking-tight">OMS by Jenius</h1>
+          <h1 className="text-3xl font-bold text-ink tracking-tight">{('OMS by Jenius' || '').toUpperCase()}</h1>
           <p className="text-sm text-info mt-2">Hotel Operations Management System</p>
         </div>
 

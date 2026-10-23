@@ -1,4 +1,5 @@
 import { useAuth } from '@/auth/AuthContext';
+import { JeniusLogo } from '@/components/JeniusLogo';
 import { Circle, LogOut, User as UserIcon } from 'lucide-react';
 
 export default function Topbar() {
@@ -6,8 +7,12 @@ export default function Topbar() {
 
   return (
     <header className="h-16 shrink-0 bg-card border-b border-line/30 flex items-center justify-between px-6">
-      {/* Hotel status badge */}
+      {/* Brand & status badge */}
       <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <JeniusLogo className="w-7 h-7 shrink-0" />
+          <span className="text-sm font-bold text-ink tracking-tight hidden md:inline">{('OMS by Jenius' || '').toUpperCase()}</span>
+        </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10 border border-success/20">
           <Circle className="w-2 h-2 fill-success text-success animate-pulse" />
           <span className="text-xs font-medium text-success">Khách sạn đang hoạt động</span>

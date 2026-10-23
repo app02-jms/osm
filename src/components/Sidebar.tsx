@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useRouter } from '@/router/RouterContext';
 import { NAVIGATION } from '@/config/navigation';
-import { ChevronDown, Hotel } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
+import { JeniusLogo } from '@/components/JeniusLogo';
 
 export default function Sidebar() {
   const { path, navigate } = useRouter();
@@ -33,9 +34,7 @@ export default function Sidebar() {
     <aside className="w-64 shrink-0 bg-ink h-full flex flex-col">
       {/* Brand */}
       <div className="h-16 flex items-center gap-2.5 px-5 border-b border-white/10">
-        <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shrink-0">
-          <Hotel className="w-5 h-5 text-white" />
-        </div>
+        <JeniusLogo className="w-9 h-9 shrink-0" />
         <div className="min-w-0">
           <p className="text-white font-bold text-sm leading-tight truncate">OMS by Jenius</p>
           <p className="text-white/50 text-[10px] leading-tight">Hotel Management</p>
