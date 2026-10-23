@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from '@/router/RouterContext';
+import { useAuth } from '@/auth/AuthContext';
 import {
   useUsers,
   useHotels,
@@ -8,6 +9,7 @@ import {
   updateUser,
   deleteUser,
   setUserHotelMappings,
+  getPermissionForModule,
   FULL_PERMISSIONS,
   HOTEL_ADMIN_PERMISSIONS,
   STAFF_PERMISSIONS,
@@ -26,10 +28,13 @@ import {
   Shield,
   Building2,
   CheckCircle2,
+  Lock,
 } from 'lucide-react';
 
 const PERMISSION_LEVELS: PermissionLevel[] = ['hidden', 'view', 'update', 'approve', 'delete'];
 const MODULES: FeatureModule[] = ['hrm', 'frontdesk', 'housekeeping', 'inventory', 'sales', 'system'];
+
+const LEVEL_RANK: Record<PermissionLevel, number> = { hidden: 0, view: 1, update: 2, approve: 3, delete: 4 };
 
 interface HotelAssignment {
   hotel_id: string;
@@ -49,12 +54,16 @@ function UserFormModal({
   editingUser,
   hotels,
   existingMappings,
+  isSuperAdminActor,
+  lockedHotelId,
   onSave,
   onClose,
 }: {
   editingUser: User | null;
   hotels: { id: string; name: string; code: string }[];
   existingMappings: { hotel_id: string; role: HotelRole; permissions: Record<string, PermissionLevel> }[];
+  isSuperAdminActor: boolean;
+  lockedHotelId: string | null;
   onSave: (data: { user: Omit<User, 'id'> | User; assignments: HotelAssignment[]; isNew: boolean }) => void;
   onClose: () => void;
 }) {
@@ -72,6 +81,10 @@ function UserFormModal({
           return acc;
         }, {} as Record<FeatureModule, PermissionLevel>),
       }));
+    }
+    // Non-super-admin: pre-assign to locked hotel
+    if (lockedHotelId) {
+      return [{ hotel_id: lockedHotelId, role: 'staff' as HotelRole, permissions: defaultPermissionsForRole('staff') }];
     }
     return [];
   });
@@ -109,11 +122,19 @@ function UserFormModal({
       setError('Phân công ít nhất 1 khách sạn cho nhân viên.');
       return;
     }
-    const userData = isSuperAdmin
-      ? { username: username.trim(), password: password.trim(), full_name: fullName.trim(), is_super_admin: true }
-      : { username: username.trim(), password: password.trim(), full_name: fullName.trim(), is_super_admin: false };
-    onSave({ user: editingUser ? { ...editingUser, ...userData } : userData, assignments: isSuperAdmin ? [] : assignments, isNew: !editingUser });
+    // Hard safety: non-super-admin can never set is_super_admin
+    const finalIsSuper = isSuperAdminActor ? isSuperAdmin : false;
+    const userData = {
+      username: username.trim(),
+      password: password.trim(),
+      full_name: fullName.trim(),
+      is_super_admin: finalIsSuper,
+    };
+    onSave({ user: editingUser ? { ...editingUser, ...userData } : userData, assignments: finalIsSuper ? [] : assignments, isNew: !editingUser });
   };
+
+  // Available hotels: super admin sees all, hotel admin sees only their locked hotel
+  const availableHotels = lockedHotelId ? hotels.filter((h) => h.id === lockedHotelId) : hotels;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -141,15 +162,26 @@ function UserFormModal({
             <TextInput value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="VD: Nguyễn Văn An" />
           </Field>
 
-          <div className="p-4 rounded-lg bg-primary-soft/20 border border-primary/10">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-sm font-medium text-ink">Super Admin</span>
-                <p className="text-xs text-info mt-0.5">Toàn quyền trên mọi khách sạn, không cần phân công</p>
+          {/* Super Admin toggle: only visible to super admins */}
+          {isSuperAdminActor && (
+            <div className="p-4 rounded-lg bg-primary-soft/20 border border-primary/10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-medium text-ink">Super Admin</span>
+                  <p className="text-xs text-info mt-0.5">Toàn quyền trên mọi khách sạn, không cần phân công</p>
+                </div>
+                <Toggle checked={isSuperAdmin} onChange={setIsSuperAdmin} />
               </div>
-              <Toggle checked={isSuperAdmin} onChange={setIsSuperAdmin} />
             </div>
-          </div>
+          )}
+
+          {/* Non-super-admin notice */}
+          {!isSuperAdminActor && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-info/10 border border-info/20 text-xs text-info">
+              <Lock className="w-3.5 h-3.5 shrink-0" />
+              <span>Bạn chỉ có thể tạo/sửa người dùng trong khách sạn hiện tại.</span>
+            </div>
+          )}
 
           {!isSuperAdmin && (
             <div className="space-y-3">
@@ -158,15 +190,17 @@ function UserFormModal({
                 <h4 className="text-sm font-semibold text-ink">Phân công khách sạn & quyền</h4>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {hotels.map((h) => {
+                {availableHotels.map((h) => {
                   const assigned = assignments.find((a) => a.hotel_id === h.id);
+                  const isLocked = !!lockedHotelId;
                   return (
                     <button
                       key={h.id}
-                      onClick={() => toggleHotel(h.id)}
+                      onClick={() => !isLocked && toggleHotel(h.id)}
+                      disabled={isLocked}
                       className={`flex items-center gap-2 p-3 rounded-lg border text-left transition-all ${
-                        assigned ? 'border-primary bg-primary/10' : 'border-line/30 hover:border-line bg-bg-main'
-                      }`}
+                        assigned ? 'border-primary bg-primary/10' : 'border-line/30 bg-bg-main'
+                      } ${isLocked ? 'cursor-not-allowed opacity-90' : 'hover:border-line'}`}
                     >
                       <Building2 className="w-4 h-4 text-info shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -174,6 +208,7 @@ function UserFormModal({
                         <p className="text-[10px] text-line font-mono">{h.code}</p>
                       </div>
                       {assigned && <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />}
+                      {isLocked && <Lock className="w-3 h-3 text-line shrink-0" />}
                     </button>
                   );
                 })}
@@ -225,12 +260,24 @@ function UserFormModal({
 
 export default function UserManagementPage() {
   const { path } = useRouter();
+  const { user: currentUser, session } = useAuth();
   const [users] = useUsers();
   const [hotels] = useHotels();
   const [mappings] = useMappings();
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
+
+  const isSuperAdmin = currentUser?.is_super_admin === true;
+  const activeHotelId = session?.activeHotelId ?? null;
+
+  // Permission level for the system module
+  const systemPermission: PermissionLevel = currentUser && activeHotelId
+    ? (isSuperAdmin ? 'delete' : getPermissionForModule(currentUser.id, activeHotelId, 'system'))
+    : 'hidden';
+  const canView = LEVEL_RANK[systemPermission] >= LEVEL_RANK.view;
+  const canEdit = LEVEL_RANK[systemPermission] >= LEVEL_RANK.update;
+  const canDelete = LEVEL_RANK[systemPermission] >= LEVEL_RANK.delete;
 
   // Parse hotelId from query string (e.g. /system/users?hotelId=htl_xxx)
   const filterHotelId = useMemo(() => {
@@ -249,14 +296,21 @@ export default function UserManagementPage() {
 
   const filtered = useMemo(() => {
     let result = users;
-    // Filter by hotelId if provided
-    if (filterHotelId) {
+
+    // Non-super-admin: strict tenant isolation — only see users in their active hotel
+    if (!isSuperAdmin && activeHotelId) {
+      const userIdsForHotel = new Set(
+        mappings.filter((m) => m.hotel_id === activeHotelId).map((m) => m.user_id)
+      );
+      result = result.filter((u) => userIdsForHotel.has(u.id));
+    } else if (filterHotelId) {
+      // Super admin with query param filter
       const userIdsForHotel = new Set(
         mappings.filter((m) => m.hotel_id === filterHotelId).map((m) => m.user_id)
       );
       result = result.filter((u) => u.is_super_admin || userIdsForHotel.has(u.id));
     }
-    // Filter by search text
+
     if (search.trim()) {
       const q = (search || '').toLowerCase();
       result = result.filter((u) =>
@@ -265,7 +319,7 @@ export default function UserManagementPage() {
       );
     }
     return result;
-  }, [users, mappings, search, filterHotelId]);
+  }, [users, mappings, search, filterHotelId, isSuperAdmin, activeHotelId]);
 
   const blankUser = (): User => ({
     id: '',
@@ -275,24 +329,33 @@ export default function UserManagementPage() {
     is_super_admin: false,
   });
 
+  const actor = {
+    is_super_admin: isSuperAdmin,
+    activeHotelId,
+  };
+
   const handleSave = (data: { user: Omit<User, 'id'> | User; assignments: HotelAssignment[]; isNew: boolean }) => {
     if (data.isNew) {
-      const created = addUser(data.user as Omit<User, 'id'>);
+      const created = addUser(data.user as Omit<User, 'id'>, actor);
       if (data.assignments.length > 0) {
-        setUserHotelMappings(created.id, data.assignments);
+        setUserHotelMappings(created.id, data.assignments, actor);
       }
     } else {
       const user = data.user as User;
-      updateUser(user.id, { username: user.username, password: user.password, full_name: user.full_name, is_super_admin: user.is_super_admin });
-      setUserHotelMappings(user.id, data.assignments);
+      updateUser(user.id, { username: user.username, password: user.password, full_name: user.full_name, is_super_admin: user.is_super_admin }, actor);
+      setUserHotelMappings(user.id, data.assignments, actor);
     }
     setShowForm(false);
     setEditing(null);
   };
 
   const handleDelete = (id: string) => {
-    deleteUser(id);
+    deleteUser(id, actor);
   };
+
+  // Hotels available for the modal: super admin sees all, hotel admin locked to their hotel
+  const modalHotels = isSuperAdmin ? hotels : (activeHotelId ? hotels.filter((h) => h.id === activeHotelId) : []);
+  const lockedHotelId = isSuperAdmin ? null : activeHotelId;
 
   return (
     <div className="px-8 pt-6 pb-8">
@@ -318,9 +381,11 @@ export default function UserManagementPage() {
               <p className="text-sm text-info mt-0.5">Tạo tài khoản, phân quyền và gán khách sạn cho người dùng.</p>
             </div>
           </div>
-          <Button onClick={() => { setEditing(blankUser()); setShowForm(true); }}>
-            <Plus className="w-4 h-4" /> Thêm người dùng
-          </Button>
+          {canEdit && (
+            <Button onClick={() => { setEditing(blankUser()); setShowForm(true); }}>
+              <Plus className="w-4 h-4" /> Thêm người dùng
+            </Button>
+          )}
         </div>
       </div>
 
@@ -340,20 +405,20 @@ export default function UserManagementPage() {
                 <th className="text-left py-3 px-4 font-medium">Họ tên</th>
                 <th className="text-left py-3 px-4 font-medium">Vai trò</th>
                 <th className="text-left py-3 px-4 font-medium">Khách sạn</th>
-                <th className="text-right py-3 px-4 font-medium">Thao tác</th>
+                {canEdit && <th className="text-right py-3 px-4 font-medium">Thao tác</th>}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center">
+                  <td colSpan={canEdit ? 5 : 4} className="py-12 text-center">
                     <Users className="w-10 h-10 text-line mx-auto mb-2" />
                     <p className="text-sm text-info">Không có người dùng nào</p>
                   </td>
                 </tr>
               ) : (
                 filtered.map((u) => {
-                  const hotels = userHotels(u.id);
+                  const uHotels = userHotels(u.id);
                   const isSuper = u.is_super_admin;
                   return (
                     <tr key={u.id} className="border-b border-line/20 hover:bg-bg-main/30 transition-colors">
@@ -371,26 +436,30 @@ export default function UserManagementPage() {
                       <td className="py-3 px-4">
                         {isSuper ? (
                           <span className="text-xs text-primary font-medium">Tất cả khách sạn</span>
-                        ) : hotels.length === 0 ? (
+                        ) : uHotels.length === 0 ? (
                           <span className="text-xs text-line">Chưa phân công</span>
                         ) : (
                           <div className="flex flex-wrap gap-1">
-                            {hotels.map((h) => (
+                            {uHotels.map((h) => (
                               <Badge key={h.id} color="info">{(hotelName(h.hotel_id) || '').toUpperCase()}</Badge>
                             ))}
                           </div>
                         )}
                       </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => { setEditing(u); setShowForm(true); }} className="p-1.5 rounded text-info hover:bg-primary-soft/40 transition-colors">
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => handleDelete(u.id)} className="p-1.5 rounded text-danger hover:bg-danger/10 transition-colors">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
+                      {canEdit && (
+                        <td className="py-3 px-4">
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => { setEditing(u); setShowForm(true); }} className="p-1.5 rounded text-info hover:bg-primary-soft/40 transition-colors">
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            {canDelete && (
+                              <button onClick={() => handleDelete(u.id)} className="p-1.5 rounded text-danger hover:bg-danger/10 transition-colors">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })
@@ -403,8 +472,10 @@ export default function UserManagementPage() {
       {showForm && editing && (
         <UserFormModal
           editingUser={editing.id ? editing : null}
-          hotels={hotels}
+          hotels={modalHotels}
           existingMappings={editing.id ? userMappings(editing.id) : []}
+          isSuperAdminActor={isSuperAdmin}
+          lockedHotelId={lockedHotelId}
           onSave={handleSave}
           onClose={() => { setShowForm(false); setEditing(null); }}
         />

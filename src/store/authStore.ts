@@ -214,18 +214,40 @@ export function setActiveHotelId(hotelId: string | null): void {
   } catch { /* ignore */ }
 }
 
-// ── CRUD actions ──────────────────────────────────────────────
-export function addUser(data: Omit<User, 'id'>): User {
-  const user: User = { ...data, id: ID.user() };
+// ── Actor context for guarded mutations ───────────────────────
+export interface ActorContext {
+  is_super_admin: boolean;
+  activeHotelId: string | null;
+}
+
+function userBelongsToHotel(userId: string, hotelId: string): boolean {
+  return mappingsStore.get().some((m) => m.user_id === userId && m.hotel_id === hotelId);
+}
+
+// ── CRUD actions (guarded) ──────────────────────────────────────
+export function addUser(data: Omit<User, 'id'>, actor?: ActorContext): User {
+  const safeData = actor && !actor.is_super_admin
+    ? { ...data, is_super_admin: false }
+    : data;
+  const user: User = { ...safeData, id: ID.user() };
   usersStore.set((prev) => [...prev, user]);
   return user;
 }
 
-export function updateUser(id: string, patch: Partial<User>): void {
+export function updateUser(id: string, patch: Partial<User>, actor?: ActorContext): void {
+  if (actor && !actor.is_super_admin) {
+    if (actor.activeHotelId && !userBelongsToHotel(id, actor.activeHotelId)) return;
+    const { is_super_admin: _ignored, ...safePatch } = patch;
+    usersStore.set((prev) => prev.map((u) => (u.id === id ? { ...u, ...safePatch, is_super_admin: u.is_super_admin } : u)));
+    return;
+  }
   usersStore.set((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)));
 }
 
-export function deleteUser(id: string): void {
+export function deleteUser(id: string, actor?: ActorContext): void {
+  if (actor && !actor.is_super_admin) {
+    if (actor.activeHotelId && !userBelongsToHotel(id, actor.activeHotelId)) return;
+  }
   usersStore.set((prev) => prev.filter((u) => u.id !== id));
   mappingsStore.set((prev) => prev.filter((m) => m.user_id !== id));
 }
@@ -244,10 +266,15 @@ export function deleteUserHotelMapping(id: string): void {
   mappingsStore.set((prev) => prev.filter((m) => m.id !== id));
 }
 
-export function setUserHotelMappings(userId: string, assignments: { hotel_id: string; role: HotelRole; permissions: FeaturePermissionMatrix }[]): void {
+export function setUserHotelMappings(userId: string, assignments: { hotel_id: string; role: HotelRole; permissions: FeaturePermissionMatrix }[], actor?: ActorContext): void {
+  const safeAssignments = actor && !actor.is_super_admin && actor.activeHotelId
+    ? assignments.filter((a) => a.hotel_id === actor.activeHotelId)
+    : assignments;
   mappingsStore.set((prev) => {
-    const filtered = prev.filter((m) => m.user_id !== userId);
-    const newMappings: UserHotelAccess[] = assignments.map((a) => ({
+    const filtered = actor && !actor.is_super_admin && actor.activeHotelId
+      ? prev.filter((m) => !(m.user_id === userId && m.hotel_id === actor.activeHotelId))
+      : prev.filter((m) => m.user_id !== userId);
+    const newMappings: UserHotelAccess[] = safeAssignments.map((a) => ({
       id: ID.mapping(),
       user_id: userId,
       hotel_id: a.hotel_id,
