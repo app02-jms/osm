@@ -50,6 +50,32 @@ function timeToMinutes(t: string | null | undefined): number {
   return h * 60 + m;
 }
 
+// Auto-detect the nearest work shift based on clock-in time.
+// Handles overnight shifts (e.g. 22:00-06:00) by computing distance
+// from the clock-in minute to the shift's start time, wrapping around midnight.
+function getNearestShiftByTime(clockInTime: string, shifts: Shift[]): Shift | null {
+  const now = timeToMinutes(clockInTime);
+  if (now < 0) return null;
+  const workShifts = shifts.filter((s) => s.kind === 'work');
+  if (workShifts.length === 0) return null;
+
+  let best: Shift | null = null;
+  let bestDist = Infinity;
+
+  for (const s of workShifts) {
+    const start = timeToMinutes(s.start_time);
+    if (start < 0) continue;
+    // Distance from clock-in to shift start, wrapping around 24h
+    let dist = Math.abs(now - start);
+    if (dist > 720) dist = 1440 - dist; // wrap around midnight
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = s;
+    }
+  }
+  return best;
+}
+
 export default function AttendancePage() {
   const [logs, setLogs] = useAttendanceLogs();
   const [approvals, setApprovals] = useApprovalRequests();
@@ -167,7 +193,8 @@ export default function AttendancePage() {
     } else {
       setClockAction('in');
       setMismatchReason('');
-      setAdjustedShiftId(scheduledShift?.id ?? shifts.find((s) => s.kind === 'work')?.id ?? '');
+      const detected = getNearestShiftByTime(time, shifts);
+      setAdjustedShiftId(detected?.id ?? '');
       setShowMismatchModal(true);
     }
   };
@@ -237,7 +264,7 @@ export default function AttendancePage() {
   const shiftName = (id: string | null) => {
     if (!id) return '—';
     const s = shifts.find((x) => x.id === id);
-    return s ? `${(s.code || '—')} · ${s.name}` : '—';
+    return s ? `${(s.code || 'OFF')} · ${s.name}` : '—';
   };
 
   // Today's approval request (if any) for the adjusted shift display
@@ -515,11 +542,15 @@ export default function AttendancePage() {
               <Field label="Ca điều chỉnh (bắt buộc)">
                 <Select value={adjustedShiftId} onChange={(e) => setAdjustedShiftId(e.target.value)}>
                   <option value="">— Chọn ca —</option>
-                  {shifts.filter((s) => s.kind === 'work').map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {(s.code || '').toUpperCase()} — {s.name} ({s.start_time}–{s.end_time})
-                    </option>
-                  ))}
+                  {shifts.filter((s) => s.kind === 'work').map((s) => {
+                    const detected = getNearestShiftByTime(nowHHmm(), shifts);
+                    const isAuto = detected?.id === s.id;
+                    return (
+                      <option key={s.id} value={s.id}>
+                        {(s.code || 'OFF').toUpperCase()} — {s.name} ({s.start_time}–{s.end_time}){isAuto ? ' (tự phát hiện)' : ''}
+                      </option>
+                    );
+                  })}
                 </Select>
               </Field>
               <Field label="Lý do điều chỉnh (bắt buộc)">

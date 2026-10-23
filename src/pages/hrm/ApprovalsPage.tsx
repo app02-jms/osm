@@ -45,7 +45,7 @@ export default function ApprovalsPage() {
   const shiftName = (id: string | null) => {
     if (!id) return '—';
     const s = shifts.find((x) => x.id === id);
-    return s ? `${(s.code || '—')} · ${s.name}` : '—';
+    return s ? `${(s.code || 'OFF')} · ${s.name}` : '—';
   };
   const shiftCodeSafe = (id: string | null) => {
     if (!id) return '';
