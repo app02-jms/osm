@@ -358,10 +358,7 @@ export default function UserManagementPage() {
                   return (
                     <tr key={u.id} className="border-b border-line/20 hover:bg-bg-main/30 transition-colors">
                       <td className="py-3 px-4">
-                        <div className="flex flex-col">
-                          <span className="font-mono text-xs font-medium text-ink">{u.username}</span>
-                          <span className="text-[10px] text-line font-mono">{u.id}</span>
-                        </div>
+                        <span className="font-mono text-xs font-medium text-ink">{u.username}</span>
                       </td>
                       <td className="py-3 px-4"><span className="font-medium text-ink">{(u.full_name || '—').toUpperCase()}</span></td>
                       <td className="py-3 px-4">
