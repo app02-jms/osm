@@ -1,13 +1,5 @@
-export interface User {
-  username: string;
-  displayName: string;
-  role: string;
-}
-
-export interface Session {
-  user: User;
-  expiresAt: number;
-}
+// Re-export auth types from the new location
+export type { User, Session, Hotel, UserHotelAccess, HotelRole, FeaturePermissionMatrix, FeatureModule, PermissionLevel } from './types/auth';
 
 export interface NavChild {
   label: string;

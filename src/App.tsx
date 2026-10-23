@@ -14,6 +14,7 @@ import AttendancePage from '@/pages/hrm/AttendancePage';
 import TimesheetPage from '@/pages/hrm/TimesheetPage';
 import ApprovalsPage from '@/pages/hrm/ApprovalsPage';
 import PayrollPage from '@/pages/hrm/PayrollPage';
+import UserManagementPage from '@/pages/settings/UserManagementPage';
 
 // Map of routes that have custom page implementations
 const CUSTOM_PAGES: Record<string, React.ComponentType> = {
@@ -25,6 +26,7 @@ const CUSTOM_PAGES: Record<string, React.ComponentType> = {
   '/hrm/timesheet': TimesheetPage,
   '/hrm/approvals': ApprovalsPage,
   '/hrm/payroll': PayrollPage,
+  '/system/users': UserManagementPage,
 };
 
 // Preload SheetJS CDN script on mount so schedule import/export is ready
