@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useRouter } from '@/router/RouterContext';
 import {
   useUsers,
   useHotels,
@@ -223,6 +224,7 @@ function UserFormModal({
 }
 
 export default function UserManagementPage() {
+  const { path } = useRouter();
   const [users] = useUsers();
   const [hotels] = useHotels();
   const [mappings] = useMappings();
@@ -230,18 +232,40 @@ export default function UserManagementPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
 
+  // Parse hotelId from query string (e.g. /system/users?hotelId=htl_xxx)
+  const filterHotelId = useMemo(() => {
+    const qIndex = path.indexOf('?');
+    if (qIndex < 0) return null;
+    const queryStr = path.slice(qIndex + 1);
+    const params = new URLSearchParams(queryStr);
+    return params.get('hotelId');
+  }, [path]);
+
+  const filterHotelName = filterHotelId ? hotels.find((h) => h.id === filterHotelId)?.name ?? filterHotelId : null;
+
   const hotelName = (id: string) => hotels.find((h) => h.id === id)?.name ?? '—';
   const userHotels = (userId: string) => mappings.filter((m) => m.user_id === userId);
   const userMappings = (userId: string) => mappings.filter((m) => m.user_id === userId);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return users;
-    const q = (search || '').toLowerCase();
-    return users.filter((u) =>
-      (u?.username || '').toLowerCase().includes(q) ||
-      (u?.full_name || '').toLowerCase().includes(q)
-    );
-  }, [users, search]);
+    let result = users;
+    // Filter by hotelId if provided
+    if (filterHotelId) {
+      const userIdsForHotel = new Set(
+        mappings.filter((m) => m.hotel_id === filterHotelId).map((m) => m.user_id)
+      );
+      result = result.filter((u) => u.is_super_admin || userIdsForHotel.has(u.id));
+    }
+    // Filter by search text
+    if (search.trim()) {
+      const q = (search || '').toLowerCase();
+      result = result.filter((u) =>
+        (u?.username || '').toLowerCase().includes(q) ||
+        (u?.full_name || '').toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [users, mappings, search, filterHotelId]);
 
   const blankUser = (): User => ({
     id: '',
@@ -277,6 +301,12 @@ export default function UserManagementPage() {
           <span>SYSTEM ADMIN</span>
           <span className="text-line">›</span>
           <span className="text-ink">Quản lý Người dùng</span>
+          {filterHotelName && (
+            <>
+              <span className="text-line">›</span>
+              <span className="text-primary">{(filterHotelName || '').toUpperCase()}</span>
+            </>
+          )}
         </nav>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">

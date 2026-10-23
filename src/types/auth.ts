@@ -15,12 +15,15 @@ export type FeaturePermissionMatrix = Partial<Record<FeatureModule, PermissionLe
 
 export type HotelRole = 'hotel_admin' | 'staff';
 
+export type CoreModule = 'hrm' | 'frontdesk' | 'housekeeping' | 'inventory';
+
 export interface Hotel {
   id: string;          // htl_xxxxxxxx
   name: string;
   code: string;
   address: string;
   logo_url: string | null;
+  enabled_modules: CoreModule[];
 }
 
 export interface User {

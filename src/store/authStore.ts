@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { User, UserHotelAccess, Hotel, FeaturePermissionMatrix, HotelRole, PermissionLevel, FeatureModule } from '@/types/auth';
+import type { User, UserHotelAccess, Hotel, FeaturePermissionMatrix, HotelRole, PermissionLevel, FeatureModule, CoreModule } from '@/types/auth';
 import { ID } from '@/utils/idGenerator';
 
 // ── Storage keys ──────────────────────────────────────────────
@@ -43,6 +43,7 @@ const SEED_HOTEL_1: Hotel = {
   code: 'JGH',
   address: '123 Nguyễn Huệ, Q.1, TP. HCM',
   logo_url: null,
+  enabled_modules: ['hrm', 'frontdesk', 'housekeeping', 'inventory'],
 };
 
 const SEED_HOTEL_2: Hotel = {
@@ -51,6 +52,7 @@ const SEED_HOTEL_2: Hotel = {
   code: 'JBR',
   address: '456 Võ Nguyên Giáp, Đà Nẵng',
   logo_url: null,
+  enabled_modules: ['hrm', 'frontdesk', 'housekeeping'],
 };
 
 const SEED_SUPER_ADMIN: User = {
