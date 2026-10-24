@@ -12,7 +12,7 @@ export type SheetColumn<T> = {
 /**
  * Export an array of records as an .xlsx download.
  */
-export function exportToXlsx<T extends Record<string, unknown>>(
+export function exportToXlsx<T>(
   rows: T[],
   columns: SheetColumn<T>[],
   filename: string,
@@ -20,7 +20,7 @@ export function exportToXlsx<T extends Record<string, unknown>>(
   const data = rows.map((row) => {
     const out: Record<string, unknown> = {};
     for (const col of columns) {
-      const val = col.toCell ? col.toCell(row) : row[col.key];
+      const val = col.toCell ? col.toCell(row) : (row as Record<string, unknown>)[col.key];
       out[col.label] = val ?? '';
     }
     return out;
@@ -34,7 +34,7 @@ export function exportToXlsx<T extends Record<string, unknown>>(
 /**
  * Build a template .xlsx with only headers (no data rows) and download it.
  */
-export function downloadTemplate<T extends Record<string, unknown>>(
+export function downloadTemplate<T>(
   columns: SheetColumn<T>[],
   filename: string,
   sample?: Partial<Record<keyof T, unknown>>,
@@ -53,7 +53,7 @@ export function downloadTemplate<T extends Record<string, unknown>>(
  * Parse an uploaded .xlsx File into an array of typed records.
  * Uses column labels (Vietnamese headers) to map back to keys.
  */
-export async function parseXlsx<T extends Record<string, unknown>>(
+export async function parseXlsx<T>(
   file: File,
   columns: SheetColumn<T>[],
 ): Promise<T[]> {
@@ -73,7 +73,7 @@ export async function parseXlsx<T extends Record<string, unknown>>(
     const out = {} as T;
     for (const col of columns) {
       const rawVal = mapped[col.key] ?? '';
-      out[col.key] = (col.fromCell ? col.fromCell(rawVal, mapped) : rawVal) as T[typeof col.key];
+      (out as Record<string, unknown>)[col.key] = col.fromCell ? col.fromCell(rawVal, mapped) : rawVal;
     }
     return out;
   });

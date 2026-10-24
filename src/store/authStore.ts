@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
-import type { User, UserHotelAccess, Hotel, FeaturePermissionMatrix, HotelRole, PermissionLevel, FeatureModule, CoreModule } from '@/types/auth';
+import type { User, UserHotelAccess, Hotel, FeaturePermissionMatrix, SubFeature, HotelRole, PermissionLevel, FeatureModule } from '@/types/auth';
+import { MODULE_SUBFEATURES } from '@/types/auth';
 import { ID } from '@/utils/idGenerator';
 
 // ── Storage keys ──────────────────────────────────────────────
@@ -10,30 +11,48 @@ const K_ACTIVE_HOTEL = 'oms_active_hotel_id';
 
 // ── Permission presets ────────────────────────────────────────
 export const FULL_PERMISSIONS: FeaturePermissionMatrix = {
-  hrm: 'delete',
-  frontdesk: 'delete',
-  housekeeping: 'delete',
-  inventory: 'delete',
-  sales: 'delete',
-  system: 'delete',
+  hrm_profiles: 'delete',
+  hrm_schedules: 'delete',
+  hrm_attendance: 'delete',
+  hrm_closures: 'delete',
+  frontdesk_departure: 'delete',
+  frontdesk_rooms: 'delete',
+  housekeeping_tasks: 'delete',
+  inventory_stock: 'delete',
+  sales_minirms: 'delete',
+  sales_rates: 'delete',
+  system_users: 'delete',
+  system_hotel_config: 'delete',
 };
 
 export const STAFF_PERMISSIONS: FeaturePermissionMatrix = {
-  hrm: 'view',
-  frontdesk: 'update',
-  housekeeping: 'update',
-  inventory: 'view',
-  sales: 'hidden',
-  system: 'hidden',
+  hrm_profiles: 'view',
+  hrm_schedules: 'view',
+  hrm_attendance: 'view',
+  hrm_closures: 'hidden',
+  frontdesk_departure: 'update',
+  frontdesk_rooms: 'update',
+  housekeeping_tasks: 'update',
+  inventory_stock: 'view',
+  sales_minirms: 'hidden',
+  sales_rates: 'hidden',
+  system_users: 'hidden',
+  system_hotel_config: 'hidden',
 };
 
 export const HOTEL_ADMIN_PERMISSIONS: FeaturePermissionMatrix = {
-  hrm: 'approve',
-  frontdesk: 'approve',
-  housekeeping: 'approve',
-  inventory: 'approve',
-  sales: 'approve',
-  system: 'view',
+  hrm_profiles: 'delete',
+  hrm_schedules: 'delete',
+  hrm_attendance: 'approve',
+  hrm_closures: 'approve',
+  frontdesk_departure: 'approve',
+  frontdesk_rooms: 'approve',
+  housekeeping_tasks: 'approve',
+  inventory_stock: 'approve',
+  sales_minirms: 'approve',
+  sales_rates: 'approve',
+  system_users: 'update',
+  system_hotel_config: 'view',
 };
 
 // ── Seed data ─────────────────────────────────────────────────
@@ -285,14 +304,32 @@ export function setUserHotelMappings(userId: string, assignments: { hotel_id: st
   });
 }
 
-export function getPermissionForModule(
+export function getPermissionForSubFeature(
   userId: string,
   hotelId: string,
-  module: FeatureModule
+  subFeature: SubFeature,
 ): PermissionLevel {
   const mapping = mappingsStore.get().find((m) => m.user_id === userId && m.hotel_id === hotelId);
   if (!mapping) return 'hidden';
-  return mapping.permissions[module] ?? 'hidden';
+  return mapping.permissions[subFeature] ?? 'hidden';
+}
+
+/** Returns the highest permission level across all sub-features of a module */
+export function getPermissionForModule(
+  userId: string,
+  hotelId: string,
+  module: FeatureModule,
+): PermissionLevel {
+  const mapping = mappingsStore.get().find((m) => m.user_id === userId && m.hotel_id === hotelId);
+  if (!mapping) return 'hidden';
+  const subs = MODULE_SUBFEATURES[module] ?? [];
+  let best: PermissionLevel = 'hidden';
+  const rank: Record<PermissionLevel, number> = { hidden: 0, view: 1, update: 2, approve: 3, delete: 4 };
+  for (const sf of subs) {
+    const lvl = mapping.permissions[sf] ?? 'hidden';
+    if (rank[lvl] > rank[best]) best = lvl;
+  }
+  return best;
 }
 
 // ── Permission level labels ───────────────────────────────────
@@ -311,4 +348,19 @@ export const MODULE_LABELS: Record<FeatureModule, string> = {
   inventory: 'Kho',
   sales: 'Sales & RMS',
   system: 'Hệ thống',
+};
+
+export const SUBFEATURE_LABELS: Record<SubFeature, string> = {
+  hrm_profiles: 'Hồ sơ nhân viên',
+  hrm_schedules: 'Lịch làm việc',
+  hrm_attendance: 'Chấm công',
+  hrm_closures: 'Chốt công',
+  frontdesk_departure: 'Departure',
+  frontdesk_rooms: 'Tình trạng phòng',
+  housekeeping_tasks: 'Nhiệm vụ buồng phòng',
+  inventory_stock: 'Tồn kho',
+  sales_minirms: 'MiniRMS',
+  sales_rates: 'Bảng giá',
+  system_users: 'Người dùng',
+  system_hotel_config: 'Cấu hình khách sạn',
 };

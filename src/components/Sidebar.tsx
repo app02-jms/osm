@@ -4,12 +4,16 @@ import { useAuth } from '@/auth/AuthContext';
 import { NAVIGATION, type NavConfigItem, type NavChildItem } from '@/config/navigation';
 import { ChevronDown } from 'lucide-react';
 import { Logo } from '@/components/common/Logo';
+import { getPermissionForSubFeature } from '@/store/authStore';
+import type { SubFeature, PermissionLevel } from '@/types/auth';
+
+const LEVEL_RANK: Record<PermissionLevel, number> = { hidden: 0, view: 1, update: 2, approve: 3, delete: 4 };
 
 const SUPER_ADMIN_ONLY_PATHS = new Set(['/system/hotel-config']);
 
 export default function Sidebar() {
   const { path, navigate } = useRouter();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const isSuperAdmin = user?.is_super_admin === true;
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     // Auto-expand the module containing the current path
@@ -35,15 +39,23 @@ export default function Sidebar() {
     navigate(to);
   };
 
-  // Filter nav items: hide super-admin-only routes from non-super-admins
+  // Filter nav items: hide super-admin-only routes and sub-features with 'hidden' permission
   const visibleNav = useMemo<NavConfigItem[]>(() => {
     return NAVIGATION.map((nav) => ({
       ...nav,
-      children: nav.children.filter((c: NavChildItem) =>
-        isSuperAdmin || !SUPER_ADMIN_ONLY_PATHS.has(c.path)
-      ),
+      children: nav.children.filter((c: NavChildItem) => {
+        // Super admin sees everything (except hotel-config which is super-admin-only)
+        if (isSuperAdmin) return true;
+        // Non-super-admin: hide super-admin-only paths
+        if (SUPER_ADMIN_ONLY_PATHS.has(c.path)) return false;
+        // Check sub-feature permission
+        const activeHotel = session?.activeHotelId;
+        if (!activeHotel || !user) return false;
+        const perm = getPermissionForSubFeature(user.id, activeHotel, c.subFeature);
+        return LEVEL_RANK[perm] >= LEVEL_RANK.view;
+      }),
     })).filter((nav) => nav.children.length > 0);
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, user, session?.activeHotelId]);
 
   return (
     <aside className="w-64 shrink-0 bg-ink h-full flex flex-col">

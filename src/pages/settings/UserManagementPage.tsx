@@ -9,14 +9,15 @@ import {
   updateUser,
   deleteUser,
   setUserHotelMappings,
-  getPermissionForModule,
-  FULL_PERMISSIONS,
+  getPermissionForSubFeature,
   HOTEL_ADMIN_PERMISSIONS,
   STAFF_PERMISSIONS,
   PERMISSION_LABELS,
   MODULE_LABELS,
+  SUBFEATURE_LABELS,
 } from '@/store/authStore';
-import type { User, HotelRole, PermissionLevel, FeatureModule } from '@/types/auth';
+import type { User, HotelRole, PermissionLevel, FeatureModule, SubFeature, FeaturePermissionMatrix } from '@/types/auth';
+import { MODULE_SUBFEATURES } from '@/types/auth';
 import { Button, Badge, TextInput, Select, Field, Toggle } from '@/components/ui';
 import {
   Users,
@@ -32,6 +33,7 @@ import {
   Download,
   Upload,
   FileDown,
+  ChevronDown,
 } from 'lucide-react';
 import { exportToXlsx, downloadTemplate, parseXlsx, type SheetColumn } from '@/utils/xlsx';
 import { generateUniqueId } from '@/utils/idGenerator';
@@ -53,18 +55,40 @@ const HOTEL_MODULES: FeatureModule[] = ['hrm', 'frontdesk', 'housekeeping', 'inv
 
 const LEVEL_RANK: Record<PermissionLevel, number> = { hidden: 0, view: 1, update: 2, approve: 3, delete: 4 };
 
+/** All sub-features across all modules */
+const ALL_SUBFEATURES: SubFeature[] = ALL_MODULES.flatMap((m) => MODULE_SUBFEATURES[m]);
+const HOTEL_SUBFEATURES: SubFeature[] = HOTEL_MODULES.flatMap((m) => MODULE_SUBFEATURES[m]);
+
 interface HotelAssignment {
   hotel_id: string;
   role: HotelRole;
-  permissions: Record<FeatureModule, PermissionLevel>;
+  permissions: FeaturePermissionMatrix;
 }
 
-function defaultPermissionsForRole(role: HotelRole): Record<FeatureModule, PermissionLevel> {
+function defaultPermissionsForRole(role: HotelRole): FeaturePermissionMatrix {
   const base = role === 'hotel_admin' ? { ...HOTEL_ADMIN_PERMISSIONS } : { ...STAFF_PERMISSIONS };
-  return ALL_MODULES.reduce((acc, m) => {
-    acc[m] = base[m] ?? 'hidden';
-    return acc;
-  }, {} as Record<FeatureModule, PermissionLevel>);
+  const out: FeaturePermissionMatrix = {};
+  for (const sf of ALL_SUBFEATURES) {
+    out[sf] = base[sf] ?? 'hidden';
+  }
+  return out;
+}
+
+/** Check if a parent module is "enabled" (at least one sub-feature is not hidden) */
+function isModuleEnabled(perms: FeaturePermissionMatrix, module: FeatureModule): boolean {
+  const subs = MODULE_SUBFEATURES[module];
+  return subs.some((sf) => (perms[sf] ?? 'hidden') !== 'hidden');
+}
+
+/** Set all sub-features of a module to a given level (or hidden if disabling) */
+function setModuleEnabled(perms: FeaturePermissionMatrix, module: FeatureModule, enabled: boolean, role: HotelRole): FeaturePermissionMatrix {
+  const next = { ...perms };
+  const subs = MODULE_SUBFEATURES[module];
+  const template = role === 'hotel_admin' ? HOTEL_ADMIN_PERMISSIONS : STAFF_PERMISSIONS;
+  for (const sf of subs) {
+    next[sf] = enabled ? (template[sf] ?? 'view') : 'hidden';
+  }
+  return next;
 }
 
 function UserFormModal({
@@ -88,15 +112,16 @@ function UserFormModal({
   const [password, setPassword] = useState(editingUser?.password ?? '');
   const [fullName, setFullName] = useState(editingUser?.full_name ?? '');
   const [isSuperAdmin, setIsSuperAdmin] = useState(editingUser?.is_super_admin ?? false);
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [assignments, setAssignments] = useState<HotelAssignment[]>(() => {
     if (existingMappings.length > 0) {
       return existingMappings.map((m) => ({
         hotel_id: m.hotel_id,
         role: m.role,
-        permissions: ALL_MODULES.reduce((acc, mod) => {
-          acc[mod] = m.permissions[mod] ?? 'hidden';
+        permissions: ALL_SUBFEATURES.reduce((acc, sf) => {
+          acc[sf] = (m.permissions[sf] as PermissionLevel) ?? 'hidden';
           return acc;
-        }, {} as Record<FeatureModule, PermissionLevel>),
+        }, {} as FeaturePermissionMatrix),
       }));
     }
     // Non-super-admin: pre-assign to locked hotel
@@ -122,12 +147,31 @@ function UserFormModal({
     );
   };
 
-  const updatePermission = (hotelId: string, module: FeatureModule, level: PermissionLevel) => {
+  const toggleModuleEnabled = (hotelId: string, module: FeatureModule) => {
+    setAssignments((prev) =>
+      prev.map((a) => {
+        if (a.hotel_id !== hotelId) return a;
+        const currentlyEnabled = isModuleEnabled(a.permissions, module);
+        return { ...a, permissions: setModuleEnabled(a.permissions, module, !currentlyEnabled, a.role) };
+      })
+    );
+  };
+
+  const updateSubFeaturePermission = (hotelId: string, sf: SubFeature, level: PermissionLevel) => {
     setAssignments((prev) =>
       prev.map((a) =>
-        a.hotel_id === hotelId ? { ...a, permissions: { ...a.permissions, [module]: level } } : a
+        a.hotel_id === hotelId ? { ...a, permissions: { ...a.permissions, [sf]: level } } : a
       )
     );
+  };
+
+  const toggleModuleExpanded = (key: string) => {
+    setExpandedModules((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   };
 
   const submit = () => {
@@ -152,6 +196,7 @@ function UserFormModal({
 
   // Available hotels: super admin sees all, hotel admin sees only their locked hotel
   const availableHotels = lockedHotelId ? hotels.filter((h) => h.id === lockedHotelId) : hotels;
+  const modulesToShow = isSuperAdminActor ? ALL_MODULES : HOTEL_MODULES;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -235,7 +280,7 @@ function UserFormModal({
                 const hotel = hotels.find((h) => h.id === a.hotel_id);
                 if (!hotel) return null;
                 return (
-                  <div key={a.hotel_id} className="rounded-lg border border-line/30 p-3 bg-bg-main/50 space-y-3">
+                  <div key={a.hotel_id} className="rounded-lg border border-line/30 p-3 bg-bg-main/50 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-medium text-ink">{(hotel.name || '').toUpperCase()}</span>
                       <Select value={a.role} onChange={(e) => updateRole(a.hotel_id, e.target.value as HotelRole)} className="w-auto">
@@ -243,21 +288,58 @@ function UserFormModal({
                         <option value="hotel_admin">Quản lý khách sạn</option>
                       </Select>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(isSuperAdminActor ? ALL_MODULES : HOTEL_MODULES).map((m) => (
-                        <div key={m} className="flex items-center justify-between gap-2">
-                          <span className="text-xs text-info">{MODULE_LABELS[m]}</span>
-                          <Select
-                            value={a.permissions[m]}
-                            onChange={(e) => updatePermission(a.hotel_id, m, e.target.value as PermissionLevel)}
-                            className="w-auto text-xs py-1"
-                          >
-                            {PERMISSION_LEVELS.map((lvl) => (
-                              <option key={lvl} value={lvl}>{PERMISSION_LABELS[lvl]}</option>
-                            ))}
-                          </Select>
-                        </div>
-                      ))}
+                    {/* Parent module toggles with expandable sub-features */}
+                    <div className="space-y-1.5">
+                      {modulesToShow.map((mod) => {
+                        const enabled = isModuleEnabled(a.permissions, mod);
+                        const expandKey = `${a.hotel_id}:${mod}`;
+                        const isExpanded = expandedModules.has(expandKey);
+                        const subs = MODULE_SUBFEATURES[mod];
+                        return (
+                          <div key={mod} className="rounded-lg border border-line/20 overflow-hidden">
+                            <div className="flex items-center justify-between px-3 py-2 bg-bg-main/70">
+                              <button
+                                type="button"
+                                onClick={() => toggleModuleEnabled(a.hotel_id, mod)}
+                                className="flex items-center gap-2 flex-1 text-left"
+                              >
+                                <Toggle checked={enabled} onChange={() => toggleModuleEnabled(a.hotel_id, mod)} />
+                                <span className={`text-xs font-medium ${enabled ? 'text-ink' : 'text-line'}`}>
+                                  {MODULE_LABELS[mod]}
+                                </span>
+                              </button>
+                              {enabled && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleModuleExpanded(expandKey)}
+                                  className="p-1 rounded text-info hover:bg-primary-soft/30 transition-colors"
+                                >
+                                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                </button>
+                              )}
+                            </div>
+                            {/* Expanded sub-feature rows */}
+                            {enabled && isExpanded && (
+                              <div className="px-3 py-2 space-y-1.5 bg-bg-main/30 border-t border-line/15">
+                                {subs.map((sf) => (
+                                  <div key={sf} className="flex items-center justify-between gap-2">
+                                    <span className="text-xs text-info">{SUBFEATURE_LABELS[sf]}</span>
+                                    <Select
+                                      value={a.permissions[sf] ?? 'hidden'}
+                                      onChange={(e) => updateSubFeaturePermission(a.hotel_id, sf, e.target.value as PermissionLevel)}
+                                      className="w-auto text-xs py-1"
+                                    >
+                                      {PERMISSION_LEVELS.map((lvl) => (
+                                        <option key={lvl} value={lvl}>{PERMISSION_LABELS[lvl]}</option>
+                                      ))}
+                                    </Select>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -290,9 +372,9 @@ export default function UserManagementPage() {
   const isSuperAdmin = currentUser?.is_super_admin === true;
   const activeHotelId = session?.activeHotelId ?? null;
 
-  // Permission level for the system module
+  // Permission level for the system_users sub-feature
   const systemPermission: PermissionLevel = currentUser && activeHotelId
-    ? (isSuperAdmin ? 'delete' : getPermissionForModule(currentUser.id, activeHotelId, 'system'))
+    ? (isSuperAdmin ? 'delete' : getPermissionForSubFeature(currentUser.id, activeHotelId, 'system_users'))
     : 'hidden';
   const canView = LEVEL_RANK[systemPermission] >= LEVEL_RANK.view;
   const canEdit = LEVEL_RANK[systemPermission] >= LEVEL_RANK.update;

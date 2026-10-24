@@ -10,8 +10,33 @@ export type FeatureModule =
   | 'sales'
   | 'system';
 
-/** Per-module permission matrix: module -> permission level */
-export type FeaturePermissionMatrix = Partial<Record<FeatureModule, PermissionLevel>>;
+/** Granular sub-features that permissions are applied to */
+export type SubFeature =
+  | 'hrm_profiles'
+  | 'hrm_schedules'
+  | 'hrm_attendance'
+  | 'hrm_closures'
+  | 'frontdesk_departure'
+  | 'frontdesk_rooms'
+  | 'housekeeping_tasks'
+  | 'inventory_stock'
+  | 'sales_minirms'
+  | 'sales_rates'
+  | 'system_users'
+  | 'system_hotel_config';
+
+/** Maps each parent module to its sub-features */
+export const MODULE_SUBFEATURES: Record<FeatureModule, SubFeature[]> = {
+  hrm: ['hrm_profiles', 'hrm_schedules', 'hrm_attendance', 'hrm_closures'],
+  frontdesk: ['frontdesk_departure', 'frontdesk_rooms'],
+  housekeeping: ['housekeeping_tasks'],
+  inventory: ['inventory_stock'],
+  sales: ['sales_minirms', 'sales_rates'],
+  system: ['system_users', 'system_hotel_config'],
+};
+
+/** Per sub-feature permission matrix */
+export type FeaturePermissionMatrix = Partial<Record<SubFeature, PermissionLevel>>;
 
 export type HotelRole = 'hotel_admin' | 'staff';
 

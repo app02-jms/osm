@@ -1,5 +1,6 @@
 // Re-export auth types from the new location
-export type { User, Session, Hotel, UserHotelAccess, HotelRole, FeaturePermissionMatrix, FeatureModule, PermissionLevel } from './types/auth';
+export type { User, Session, Hotel, UserHotelAccess, HotelRole, FeaturePermissionMatrix, FeatureModule, SubFeature, PermissionLevel } from './types/auth';
+export { MODULE_SUBFEATURES } from './types/auth';
 
 export interface NavChild {
   label: string;
