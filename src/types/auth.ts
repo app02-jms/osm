@@ -15,6 +15,7 @@ export type SubFeature =
   | 'hrm_profiles'
   | 'hrm_schedules'
   | 'hrm_attendance'
+  | 'hrm_timesheet'
   | 'hrm_closures'
   | 'frontdesk_departure'
   | 'frontdesk_rooms'
@@ -27,7 +28,7 @@ export type SubFeature =
 
 /** Maps each parent module to its sub-features */
 export const MODULE_SUBFEATURES: Record<FeatureModule, SubFeature[]> = {
-  hrm: ['hrm_profiles', 'hrm_schedules', 'hrm_attendance', 'hrm_closures'],
+  hrm: ['hrm_profiles', 'hrm_schedules', 'hrm_attendance', 'hrm_timesheet', 'hrm_closures'],
   frontdesk: ['frontdesk_departure', 'frontdesk_rooms'],
   housekeeping: ['housekeeping_tasks'],
   inventory: ['inventory_stock'],

@@ -49,7 +49,7 @@ export const NAVIGATION: NavConfigItem[] = [
     children: [
       { label: 'Hồ sơ nhân viên', path: '/hrm/employees', icon: Users, subFeature: 'hrm_profiles' },
       { label: 'Chấm công', path: '/hrm/attendance', icon: Clock, subFeature: 'hrm_attendance' },
-      { label: 'Bảng chấm công', path: '/hrm/timesheet', icon: CalendarCheck, subFeature: 'hrm_attendance' },
+      { label: 'Bảng chấm công', path: '/hrm/timesheet', icon: CalendarCheck, subFeature: 'hrm_timesheet' },
       { label: 'Duyệt điều chỉnh', path: '/hrm/approvals', icon: FileCheck, subFeature: 'hrm_attendance' },
       { label: 'Lịch làm việc', path: '/hrm/schedule', icon: CalendarDays, subFeature: 'hrm_schedules' },
       { label: 'Sổ phép', path: '/hrm/leave', icon: BookOpen, subFeature: 'hrm_schedules' },
