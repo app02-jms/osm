@@ -74,6 +74,14 @@ export interface UserHotelAccess {
   permissions: FeaturePermissionMatrix;
 }
 
+/** A reusable permission template that can be applied to user-hotel assignments */
+export interface RoleTemplate {
+  id: string;          // role_xxxxxxxx
+  name: string;
+  description?: string;
+  permissions: FeaturePermissionMatrix;
+}
+
 export interface Session {
   userId: string;
   username: string;

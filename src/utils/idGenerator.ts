@@ -28,6 +28,7 @@ export const ID = {
   hotel: () => generateUniqueId('htl'),
   user: () => generateUniqueId('usr'),
   mapping: () => generateUniqueId('map'),
+  role: () => generateUniqueId('role'),
   attendance: () => generateUniqueId('att'),
   schedule: () => generateUniqueId('sch'),
   closure: () => generateUniqueId('cls'),
