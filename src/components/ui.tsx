@@ -51,7 +51,10 @@ export function Toggle({ checked, onChange, label }: ToggleProps) {
   return (
     <button
       type="button"
-      onClick={() => onChange(!checked)}
+      onClick={(e) => {
+        e.stopPropagation();
+        onChange(!checked);
+      }}
       className="flex items-center gap-2.5"
     >
       <div

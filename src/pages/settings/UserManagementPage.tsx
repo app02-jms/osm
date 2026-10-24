@@ -298,16 +298,15 @@ function UserFormModal({
                         return (
                           <div key={mod} className="rounded-lg border border-line/20 overflow-hidden">
                             <div className="flex items-center justify-between px-3 py-2 bg-bg-main/70">
-                              <button
-                                type="button"
-                                onClick={() => toggleModuleEnabled(a.hotel_id, mod)}
-                                className="flex items-center gap-2 flex-1 text-left"
-                              >
-                                <Toggle checked={enabled} onChange={() => toggleModuleEnabled(a.hotel_id, mod)} />
+                              <div className="flex items-center gap-2 flex-1">
+                                <Toggle
+                                  checked={enabled}
+                                  onChange={() => toggleModuleEnabled(a.hotel_id, mod)}
+                                />
                                 <span className={`text-xs font-medium ${enabled ? 'text-ink' : 'text-line'}`}>
                                   {MODULE_LABELS[mod]}
                                 </span>
-                              </button>
+                              </div>
                               {enabled && (
                                 <button
                                   type="button"
