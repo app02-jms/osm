@@ -7,7 +7,7 @@ import { Logo } from '@/components/common/Logo';
 import { getPermissionForSubFeature } from '@/store/authStore';
 import type { SubFeature, PermissionLevel } from '@/types/auth';
 
-const LEVEL_RANK: Record<PermissionLevel, number> = { hidden: 0, view: 1, update: 2, approve: 3, delete: 4 };
+const LEVEL_RANK: Record<PermissionLevel, number> = { hidden: 0, view: 1, view_all: 2, update: 3, approve: 4, delete: 5 };
 
 const SUPER_ADMIN_ONLY_PATHS = new Set(['/system/hotel-config']);
 

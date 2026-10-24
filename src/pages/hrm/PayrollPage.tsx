@@ -243,7 +243,7 @@ export default function PayrollPage() {
   const [departments] = useDepartments();
   const [shifts] = useShifts();
   const [leaveEntries] = useLeaveLedger();
-  const { can, getLevel, LEVEL_RANK } = useHrmPermission();
+  const { can } = useHrmPermission();
   const canApprove = can('hrm_closures', 'approve');
   const canDelete = can('hrm_closures', 'delete');
 

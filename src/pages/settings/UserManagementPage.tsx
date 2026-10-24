@@ -48,12 +48,12 @@ const USER_COLUMNS: SheetColumn<ImportableUser>[] = [
   { key: 'hotel_id', label: 'Khách sạn' },
 ];
 
-const PERMISSION_LEVELS: PermissionLevel[] = ['hidden', 'view', 'update', 'approve', 'delete'];
+const PERMISSION_LEVELS: PermissionLevel[] = ['hidden', 'view', 'view_all', 'update', 'approve', 'delete'];
 const ALL_MODULES: FeatureModule[] = ['hrm', 'frontdesk', 'housekeeping', 'inventory', 'sales', 'system'];
 // Operational modules only — 'system' is super-admin-exclusive and never exposed to hotel staff
 const HOTEL_MODULES: FeatureModule[] = ['hrm', 'frontdesk', 'housekeeping', 'inventory', 'sales'];
 
-const LEVEL_RANK: Record<PermissionLevel, number> = { hidden: 0, view: 1, update: 2, approve: 3, delete: 4 };
+const LEVEL_RANK: Record<PermissionLevel, number> = { hidden: 0, view: 1, view_all: 2, update: 3, approve: 4, delete: 5 };
 
 /** All sub-features across all modules */
 const ALL_SUBFEATURES: SubFeature[] = ALL_MODULES.flatMap((m) => MODULE_SUBFEATURES[m]);

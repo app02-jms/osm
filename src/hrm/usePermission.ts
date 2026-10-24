@@ -5,9 +5,10 @@ import type { SubFeature, PermissionLevel } from '@/types/auth';
 const LEVEL_RANK: Record<PermissionLevel, number> = {
   hidden: 0,
   view: 1,
-  update: 2,
-  approve: 3,
-  delete: 4,
+  view_all: 2,
+  update: 3,
+  approve: 4,
+  delete: 5,
 };
 
 /**

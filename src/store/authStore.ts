@@ -324,7 +324,7 @@ export function getPermissionForModule(
   if (!mapping) return 'hidden';
   const subs = MODULE_SUBFEATURES[module] ?? [];
   let best: PermissionLevel = 'hidden';
-  const rank: Record<PermissionLevel, number> = { hidden: 0, view: 1, update: 2, approve: 3, delete: 4 };
+  const rank: Record<PermissionLevel, number> = { hidden: 0, view: 1, view_all: 2, update: 3, approve: 4, delete: 5 };
   for (const sf of subs) {
     const lvl = mapping.permissions[sf] ?? 'hidden';
     if (rank[lvl] > rank[best]) best = lvl;
@@ -335,7 +335,8 @@ export function getPermissionForModule(
 // ── Permission level labels ───────────────────────────────────
 export const PERMISSION_LABELS: Record<PermissionLevel, string> = {
   hidden: 'Không hiển thị',
-  view: 'Xem',
+  view: 'Xem cá nhân',
+  view_all: 'Xem tất cả (Giám sát)',
   update: 'Cập nhật',
   approve: 'Duyệt',
   delete: 'Xóa',

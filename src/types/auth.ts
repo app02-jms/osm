@@ -1,6 +1,6 @@
 // ── Auth & Multi-Hotel Access Types ───────────────────────────
 
-export type PermissionLevel = 'hidden' | 'view' | 'update' | 'approve' | 'delete';
+export type PermissionLevel = 'hidden' | 'view' | 'view_all' | 'update' | 'approve' | 'delete';
 
 export type FeatureModule =
   | 'hrm'

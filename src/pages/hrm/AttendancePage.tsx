@@ -8,6 +8,8 @@ import {
   useHrmSettings,
   genId,
 } from '@/hrm/store';
+import { useHrmPermission } from '@/hrm/usePermission';
+import { useAuth } from '@/auth/AuthContext';
 import type { AttendanceLog, ApprovalRequest, Shift } from '@/hrm/types';
 import { Button, Badge, TextInput, Field, Select } from '@/components/ui';
 import {
@@ -18,6 +20,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   CalendarClock,
+  Lock,
 } from 'lucide-react';
 import { localDateStr } from '@/hrm/dateUtils';
 
@@ -84,7 +87,33 @@ export default function AttendancePage() {
   const [shifts] = useShifts();
   const [employees] = useEmployees();
   const [settings] = useHrmSettings();
+  const { user } = useAuth();
+  const { getLevel, LEVEL_RANK } = useHrmPermission();
+  const attLevel = getLevel('hrm_attendance');
   const [selectedEmpId, setSelectedEmpId] = useState<string>('');
+
+  // Resolve current user's linked employee: match employee.user_id === user.id,
+  // or fall back to employee_code === username
+  const myEmployee = useMemo(() => {
+    if (!user) return null;
+    return employees.find((e) => e.user_id === user.id)
+      ?? employees.find((e) => e.employee_code === user.username)
+      ?? null;
+  }, [employees, user]);
+
+  // Scope: view/view_all see all employees (view_all = supervisor sees all, view = personal only).
+  // For 'view' level: restrict to only the current user's linked employee.
+  // For 'view_all' and above: show all employees.
+  const scopedEmployees = useMemo(() => {
+    if (attLevel === 'hidden') return [];
+    if (attLevel === 'view' && !user?.is_super_admin) {
+      return myEmployee ? [myEmployee] : [];
+    }
+    return employees;
+  }, [employees, attLevel, myEmployee, user]);
+
+  // Whether the current user can clock in/out (requires at least 'update')
+  const canClock = LEVEL_RANK[attLevel] >= LEVEL_RANK.update;
 
   const [gpsStatus, setGpsStatus] = useState<{
     loading: boolean;
@@ -103,12 +132,18 @@ export default function AttendancePage() {
 
   const today = todayStr();
 
-  // Pick first schedulable employee as default for admin demo
+  // Auto-select: for personal-scope users, lock to their own employee record.
+  // For full-scope users, default to first available employee.
   useEffect(() => {
-    if (!selectedEmpId && employees.length > 0) {
-      setSelectedEmpId(employees[0].id);
+    if (scopedEmployees.length === 0) return;
+    if (!scopedEmployees.some((e) => e.id === selectedEmpId)) {
+      if (attLevel === 'view' && myEmployee) {
+        setSelectedEmpId(myEmployee.id);
+      } else {
+        setSelectedEmpId(scopedEmployees[0].id);
+      }
     }
-  }, [employees, selectedEmpId]);
+  }, [scopedEmployees, selectedEmpId, attLevel, myEmployee]);
 
   const emp = useMemo(
     () => employees.find((e) => e.id === selectedEmpId),
@@ -310,8 +345,9 @@ export default function AttendancePage() {
                 className="w-full px-3 py-2 rounded-lg border border-line/50 bg-bg-main text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
                 value={selectedEmpId}
                 onChange={(e) => setSelectedEmpId(e.target.value)}
+                disabled={attLevel === 'view'}
               >
-                {employees.map((e) => (
+                {scopedEmployees.map((e) => (
                   <option key={e.id} value={e.id}>{(e.display_name || '')} — {e.employee_code}</option>
                 ))}
               </select>
@@ -402,6 +438,7 @@ export default function AttendancePage() {
         {/* Right: Clock-in actions + today's status */}
         <div className="lg:col-span-2 space-y-4">
           {/* Clock actions */}
+          {canClock ? (
           <div className="bg-card rounded-xl border border-line/30 p-6">
             <div className="text-center mb-6">
               <p className="text-xs text-info mb-1">Thời gian hiện tại</p>
@@ -437,6 +474,21 @@ export default function AttendancePage() {
               </button>
             </div>
           </div>
+          ) : (
+          <div className="bg-card rounded-xl border border-line/30 p-6">
+            <div className="flex items-center gap-3 px-4 py-4 rounded-lg bg-info/10 border border-info/20">
+              <Lock className="w-5 h-5 text-info shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-ink">Chế độ xem — không thể chấm công</p>
+                <p className="text-xs text-info mt-0.5">
+                  {attLevel === 'view_all'
+                    ? 'Bạn có quyền xem tất cả chấm công nhưng không thể chấm công thay người khác.'
+                    : 'Quyền chấm công chưa được cấp. Vui lòng liên hệ quản lý.'}
+                </p>
+              </div>
+            </div>
+          </div>
+          )}
 
           {/* Today's attendance status */}
           <div className="bg-card rounded-xl border border-line/30 p-5">
