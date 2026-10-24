@@ -54,7 +54,7 @@ export const NAVIGATION: NavConfigItem[] = [
       { label: 'Lịch làm việc', path: '/hrm/schedule', icon: CalendarDays, subFeature: 'hrm_schedules' },
       { label: 'Sổ phép', path: '/hrm/leave', icon: BookOpen, subFeature: 'hrm_schedules' },
       { label: 'Chốt công', path: '/hrm/payroll', icon: ClipboardCheck, subFeature: 'hrm_closures' },
-      { label: 'Cấu hình HRM', path: '/hrm/config', icon: Settings, subFeature: 'hrm_profiles' },
+      { label: 'Cấu hình HRM', path: '/hrm/config', icon: Settings, subFeature: 'hrm_config' },
     ],
   },
   {
@@ -66,7 +66,7 @@ export const NAVIGATION: NavConfigItem[] = [
       { label: 'Logbook', path: '/frontdesk/logbook', icon: NotebookPen, subFeature: 'frontdesk_departure' },
       { label: 'Báo cáo Kỹ thuật', path: '/frontdesk/technical', icon: Wrench, subFeature: 'frontdesk_departure' },
       { label: 'Phê duyệt', path: '/frontdesk/approvals', icon: FileSignature, subFeature: 'frontdesk_departure' },
-      { label: 'Cấu hình Lễ tân', path: '/frontdesk/config', icon: SlidersHorizontal, subFeature: 'frontdesk_rooms' },
+      { label: 'Cấu hình Lễ tân', path: '/frontdesk/config', icon: SlidersHorizontal, subFeature: 'frontdesk_config' },
     ],
   },
   {
@@ -78,7 +78,7 @@ export const NAVIGATION: NavConfigItem[] = [
       { label: 'Tình trạng phòng', path: '/housekeeping/room-status', icon: BedDouble, subFeature: 'frontdesk_rooms' },
       { label: 'Giao nhận đồ vải', path: '/housekeeping/linen-transfer', icon: PackageCheck, subFeature: 'housekeeping_tasks' },
       { label: 'Bảng kê đồ vải', path: '/housekeeping/linen-list', icon: ClipboardList, subFeature: 'housekeeping_tasks' },
-      { label: 'Cấu hình Buồng phòng', path: '/housekeeping/config', icon: SlidersHorizontal, subFeature: 'housekeeping_tasks' },
+      { label: 'Cấu hình Buồng phòng', path: '/housekeeping/config', icon: SlidersHorizontal, subFeature: 'housekeeping_config' },
     ],
   },
   {
@@ -90,7 +90,7 @@ export const NAVIGATION: NavConfigItem[] = [
       { label: 'Kho Buồng phòng', path: '/inventory/housekeeping', icon: Boxes, subFeature: 'inventory_stock' },
       { label: 'Báo cáo X-N-T', path: '/inventory/report', icon: TrendingUp, subFeature: 'inventory_stock' },
       { label: 'Đề nghị mua hàng', path: '/inventory/purchase', icon: ShoppingCart, subFeature: 'inventory_stock' },
-      { label: 'Cấu hình Kho', path: '/inventory/config', icon: SlidersHorizontal, subFeature: 'inventory_stock' },
+      { label: 'Cấu hình Kho', path: '/inventory/config', icon: SlidersHorizontal, subFeature: 'inventory_config' },
     ],
   },
   {
@@ -100,7 +100,7 @@ export const NAVIGATION: NavConfigItem[] = [
     children: [
       { label: 'MiniRMS', path: '/sales/minirms', icon: TrendingUp, subFeature: 'sales_minirms' },
       { label: 'Bảng giá phòng', path: '/sales/rates', icon: Sliders, subFeature: 'sales_rates' },
-      { label: 'Cấu hình RMS', path: '/sales/config', icon: Settings, subFeature: 'sales_rates' },
+      { label: 'Cấu hình RMS', path: '/sales/config', icon: Settings, subFeature: 'sales_config' },
     ],
   },
   {

@@ -17,22 +17,27 @@ export type SubFeature =
   | 'hrm_attendance'
   | 'hrm_timesheet'
   | 'hrm_closures'
+  | 'hrm_config'
   | 'frontdesk_departure'
   | 'frontdesk_rooms'
+  | 'frontdesk_config'
   | 'housekeeping_tasks'
+  | 'housekeeping_config'
   | 'inventory_stock'
+  | 'inventory_config'
   | 'sales_minirms'
   | 'sales_rates'
+  | 'sales_config'
   | 'system_users'
   | 'system_hotel_config';
 
 /** Maps each parent module to its sub-features */
 export const MODULE_SUBFEATURES: Record<FeatureModule, SubFeature[]> = {
-  hrm: ['hrm_profiles', 'hrm_schedules', 'hrm_attendance', 'hrm_timesheet', 'hrm_closures'],
-  frontdesk: ['frontdesk_departure', 'frontdesk_rooms'],
-  housekeeping: ['housekeeping_tasks'],
-  inventory: ['inventory_stock'],
-  sales: ['sales_minirms', 'sales_rates'],
+  hrm: ['hrm_profiles', 'hrm_schedules', 'hrm_attendance', 'hrm_timesheet', 'hrm_closures', 'hrm_config'],
+  frontdesk: ['frontdesk_departure', 'frontdesk_rooms', 'frontdesk_config'],
+  housekeeping: ['housekeeping_tasks', 'housekeeping_config'],
+  inventory: ['inventory_stock', 'inventory_config'],
+  sales: ['sales_minirms', 'sales_rates', 'sales_config'],
   system: ['system_users', 'system_hotel_config'],
 };
 
