@@ -93,10 +93,11 @@ export default function AttendancePage() {
   const [selectedEmpId, setSelectedEmpId] = useState<string>('');
 
   // Resolve current user's linked employee: match employee.user_id === user.id,
-  // or fall back to employee_code === username
+  // or fall back to employee.id === user.employee_id, then employee_code === username
   const myEmployee = useMemo(() => {
     if (!user) return null;
     return employees.find((e) => e.user_id === user.id)
+      ?? (user.employee_id ? employees.find((e) => e.id === user.employee_id) : null)
       ?? employees.find((e) => e.employee_code === user.username)
       ?? null;
   }, [employees, user]);

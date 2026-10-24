@@ -63,6 +63,7 @@ export interface User {
   password: string;
   full_name: string;
   is_super_admin: boolean;
+  employee_id?: string; // linked Employee record (e_xxxxxxxx)
 }
 
 export interface UserHotelAccess {

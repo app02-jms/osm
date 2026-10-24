@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { exportToXlsx, downloadTemplate, parseXlsx, type SheetColumn } from '@/utils/xlsx';
 import { generateUniqueId } from '@/utils/idGenerator';
+import { useEmployees } from '@/hrm/store';
 
 type ImportableUser = User & { role: HotelRole; hotel_id: string };
 
@@ -97,6 +98,7 @@ function UserFormModal({
   existingMappings,
   isSuperAdminActor,
   lockedHotelId,
+  employees,
   onSave,
   onClose,
 }: {
@@ -105,12 +107,14 @@ function UserFormModal({
   existingMappings: { hotel_id: string; role: HotelRole; permissions: Record<string, PermissionLevel> }[];
   isSuperAdminActor: boolean;
   lockedHotelId: string | null;
+  employees: { id: string; employee_code: string; full_name: string; display_name: string }[];
   onSave: (data: { user: Omit<User, 'id'> | User; assignments: HotelAssignment[]; isNew: boolean }) => void;
   onClose: () => void;
 }) {
   const [username, setUsername] = useState(editingUser?.username ?? '');
   const [password, setPassword] = useState(editingUser?.password ?? '');
   const [fullName, setFullName] = useState(editingUser?.full_name ?? '');
+  const [employeeId, setEmployeeId] = useState(editingUser?.employee_id ?? '');
   const [isSuperAdmin, setIsSuperAdmin] = useState(editingUser?.is_super_admin ?? false);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [assignments, setAssignments] = useState<HotelAssignment[]>(() => {
@@ -190,6 +194,7 @@ function UserFormModal({
       password: password.trim(),
       full_name: fullName.trim(),
       is_super_admin: finalIsSuper,
+      employee_id: employeeId || undefined,
     };
     onSave({ user: editingUser ? { ...editingUser, ...userData } : userData, assignments: finalIsSuper ? [] : assignments, isNew: !editingUser });
   };
@@ -222,6 +227,18 @@ function UserFormModal({
           </div>
           <Field label="Họ và tên">
             <TextInput value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="VD: Nguyễn Văn An" />
+          </Field>
+
+          {/* Liên kết Mã NV */}
+          <Field label="Liên kết Mã NV">
+            <Select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
+              <option value="">— Chưa liên kết —</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  [{emp.employee_code}] — {emp.full_name || emp.display_name}
+                </option>
+              ))}
+            </Select>
           </Field>
 
           {/* Super Admin toggle: only visible to super admins */}
@@ -362,6 +379,7 @@ export default function UserManagementPage() {
   const [users] = useUsers();
   const [hotels] = useHotels();
   const [mappings] = useMappings();
+  const [hrmEmployees] = useEmployees();
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
@@ -427,6 +445,7 @@ export default function UserManagementPage() {
     password: '',
     full_name: '',
     is_super_admin: false,
+    employee_id: undefined,
   });
 
   const actor = {
@@ -442,7 +461,7 @@ export default function UserManagementPage() {
       }
     } else {
       const user = data.user as User;
-      updateUser(user.id, { username: user.username, password: user.password, full_name: user.full_name, is_super_admin: user.is_super_admin }, actor);
+      updateUser(user.id, { username: user.username, password: user.password, full_name: user.full_name, is_super_admin: user.is_super_admin, employee_id: user.employee_id }, actor);
       setUserHotelMappings(user.id, data.assignments, actor);
     }
     setShowForm(false);
@@ -579,6 +598,7 @@ export default function UserManagementPage() {
               <tr className="border-b border-line/30 text-info text-xs bg-bg-main/50">
                 <th className="text-left py-3 px-4 font-medium">Tên đăng nhập</th>
                 <th className="text-left py-3 px-4 font-medium">Họ tên</th>
+                <th className="text-left py-3 px-4 font-medium">Mã NV</th>
                 <th className="text-left py-3 px-4 font-medium">Vai trò</th>
                 <th className="text-left py-3 px-4 font-medium">Khách sạn</th>
                 {canEdit && <th className="text-right py-3 px-4 font-medium">Thao tác</th>}
@@ -587,7 +607,7 @@ export default function UserManagementPage() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={canEdit ? 5 : 4} className="py-12 text-center">
+                  <td colSpan={canEdit ? 6 : 5} className="py-12 text-center">
                     <Users className="w-10 h-10 text-line mx-auto mb-2" />
                     <p className="text-sm text-info">Không có người dùng nào</p>
                   </td>
@@ -602,6 +622,11 @@ export default function UserManagementPage() {
                         <span className="font-mono text-xs font-medium text-ink">{u.username}</span>
                       </td>
                       <td className="py-3 px-4"><span className="font-medium text-ink">{(u.full_name || '—').toUpperCase()}</span></td>
+                      <td className="py-3 px-4">
+                        {u.employee_id
+                          ? <span className="font-mono text-xs font-medium text-ink">{hrmEmployees.find((e) => e.id === u.employee_id)?.employee_code ?? '—'}</span>
+                          : <span className="text-xs text-line">—</span>}
+                      </td>
                       <td className="py-3 px-4">
                         {isSuper ? (
                           <Badge color="primary">Super Admin</Badge>
@@ -652,6 +677,7 @@ export default function UserManagementPage() {
           existingMappings={editing.id ? userMappings(editing.id) : []}
           isSuperAdminActor={isSuperAdmin}
           lockedHotelId={lockedHotelId}
+          employees={hrmEmployees}
           onSave={handleSave}
           onClose={() => { setShowForm(false); setEditing(null); }}
         />

@@ -5,6 +5,7 @@ import { Field, TextInput, Select, Toggle, Button, Badge } from '@/components/ui
 import { Users, Plus, Pencil, Trash2, Search, Save, Phone, Calendar, Briefcase, Download, Upload, FileDown } from 'lucide-react';
 import { localDateStr } from '@/hrm/dateUtils';
 import { useAuth } from '@/auth/AuthContext';
+import { useHrmPermission } from '@/hrm/usePermission';
 import { exportToXlsx, downloadTemplate, parseXlsx, type SheetColumn } from '@/utils/xlsx';
 import { generateUniqueId } from '@/utils/idGenerator';
 
@@ -46,7 +47,9 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useEmployees();
   const [departments] = useDepartments();
   const [statuses] = useWorkStatuses();
-  const { session } = useAuth();
+  const { session, user } = useAuth();
+  const { getLevel, LEVEL_RANK } = useHrmPermission();
+  const empLevel = getLevel('hrm_profiles');
   const activeHotelId = session?.activeHotelId ?? 'htl_01';
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importMsg, setImportMsg] = useState('');
@@ -61,8 +64,25 @@ export default function EmployeesPage() {
   const statusName = (id: string) => statuses.find((s) => s.id === id)?.name ?? '—';
   const statusObj = (id: string) => statuses.find((s) => s.id === id);
 
+  // Resolve current user's linked employee for personal-scope scoping
+  const myEmployee = useMemo(() => {
+    if (!user) return null;
+    return employees.find((e) => e.user_id === user.id)
+      ?? (user.employee_id ? employees.find((e) => e.id === user.employee_id) : null)
+      ?? employees.find((e) => e.employee_code === user.username)
+      ?? null;
+  }, [employees, user]);
+
+  const canEditEmployees = LEVEL_RANK[empLevel] >= LEVEL_RANK.update;
+
   const filtered = useMemo(() => {
     let list = employees;
+    // Scope: 'view' level shows only the current user's linked employee record;
+    // 'view_all' and above shows all employees.
+    if (empLevel === 'hidden') return [];
+    if (empLevel === 'view' && !user?.is_super_admin) {
+      list = myEmployee ? [myEmployee] : [];
+    }
     if (activeTab === 'active') {
       list = list.filter((e) => statusObj(e.status_id)?.can_schedule_and_clock);
     } else if (activeTab === 'inactive') {
@@ -80,7 +100,7 @@ export default function EmployeesPage() {
     }
     return list;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employees, activeTab, filterDept, filterStatus, search, departments, statuses]);
+  }, [employees, activeTab, filterDept, filterStatus, search, departments, statuses, empLevel, myEmployee, user]);
 
   const blankEmployee = (): Employee => ({
     id: genId('e_'),
@@ -187,9 +207,11 @@ export default function EmployeesPage() {
               <p className="text-sm text-info mt-0.5">Quản lý thông tin và hồ sơ của nhân viên khách sạn.</p>
             </div>
           </div>
-          <Button onClick={() => { setEditing(blankEmployee()); setShowForm(true); }}>
-            <Plus className="w-4 h-4" /> Thêm nhân viên
-          </Button>
+          {canEditEmployees && (
+            <Button onClick={() => { setEditing(blankEmployee()); setShowForm(true); }}>
+              <Plus className="w-4 h-4" /> Thêm nhân viên
+            </Button>
+          )}
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <div className="inline-flex gap-1 bg-primary-soft/30 border border-line/40 rounded-lg p-1">
@@ -279,14 +301,18 @@ export default function EmployeesPage() {
                       {emp.has_leave ? <Badge color="primary">Có</Badge> : <span className="text-line text-xs">Không</span>}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => { setEditing(emp); setShowForm(true); }} className="p-1.5 rounded text-info hover:bg-primary-soft/40 transition-colors">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => handleDelete(emp.id)} className="p-1.5 rounded text-danger hover:bg-danger/10 transition-colors">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      {canEditEmployees ? (
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => { setEditing(emp); setShowForm(true); }} className="p-1.5 rounded text-info hover:bg-primary-soft/40 transition-colors">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleDelete(emp.id)} className="p-1.5 rounded text-danger hover:bg-danger/10 transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-line">—</span>
+                      )}
                     </td>
                   </tr>
                 );

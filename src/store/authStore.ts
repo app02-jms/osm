@@ -114,6 +114,7 @@ const SEED_STAFF: User = {
   password: '123',
   full_name: 'Nhân viên Lễ tân',
   is_super_admin: false,
+  employee_id: 'e1',
 };
 
 const SEED_MAPPINGS: UserHotelAccess[] = [
