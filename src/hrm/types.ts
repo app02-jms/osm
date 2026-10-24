@@ -36,6 +36,8 @@ export interface Employee {
   has_leave: boolean;
   opening_leave_balance: number;
   user_id: string | null;
+  hotel_id?: string;
+  base_salary?: number;
 }
 
 export interface Schedule {

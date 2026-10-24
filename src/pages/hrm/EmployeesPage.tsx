@@ -1,9 +1,40 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useEmployees, useDepartments, useWorkStatuses, nextEmployeeCode, genId } from '@/hrm/store';
 import type { Employee } from '@/hrm/types';
 import { Field, TextInput, Select, Toggle, Button, Badge } from '@/components/ui';
-import { Users, Plus, Pencil, Trash2, Search, Save, Phone, Calendar, Briefcase } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, Search, Save, Phone, Calendar, Briefcase, Download, Upload, FileDown } from 'lucide-react';
 import { localDateStr } from '@/hrm/dateUtils';
+import { useAuth } from '@/auth/AuthContext';
+import { exportToXlsx, downloadTemplate, parseXlsx, type SheetColumn } from '@/utils/xlsx';
+import { generateUniqueId } from '@/utils/idGenerator';
+
+const EMPLOYEE_COLUMNS: SheetColumn<Employee>[] = [
+  { key: 'employee_code', label: 'Mã NV' },
+  { key: 'display_name', label: 'Tên hiển thị' },
+  { key: 'full_name', label: 'Họ tên đầy đủ' },
+  { key: 'department_id', label: 'Bộ phận' },
+  { key: 'job_title', label: 'Chức vụ' },
+  { key: 'phone', label: 'Điện thoại' },
+  { key: 'start_date', label: 'Ngày bắt đầu' },
+  { key: 'status_id', label: 'Trạng thái' },
+  { key: 'has_leave', label: 'Có phép', fromCell: (raw) => String(raw).toLowerCase() === 'true' || raw === '1' || raw === 1 },
+  { key: 'opening_leave_balance', label: 'Số dư phép', fromCell: (raw) => Number(raw) || 0 },
+  { key: 'base_salary', label: 'Lương cơ bản', fromCell: (raw) => Number(raw) || 0 },
+];
+
+function resolveDeptId(name: string, departments: { id: string; name: string }[]): string {
+  const n = (name || '').trim().toLowerCase();
+  const found = departments.find((d) => d.name.toLowerCase() === n);
+  if (found) return found.id;
+  return departments[0]?.id ?? '';
+}
+
+function resolveStatusId(name: string, statuses: { id: string; name: string }[]): string {
+  const n = (name || '').trim().toLowerCase();
+  const found = statuses.find((s) => s.name.toLowerCase() === n);
+  if (found) return found.id;
+  return statuses[0]?.id ?? '';
+}
 
 const TABS = [
   { key: 'all', label: 'Tất cả' },
@@ -15,6 +46,10 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useEmployees();
   const [departments] = useDepartments();
   const [statuses] = useWorkStatuses();
+  const { session } = useAuth();
+  const activeHotelId = session?.activeHotelId ?? 'htl_01';
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importMsg, setImportMsg] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
   const [filterDept, setFilterDept] = useState('');
@@ -75,6 +110,64 @@ export default function EmployeesPage() {
     setEmployees((prev) => prev.filter((e) => e.id !== id));
   };
 
+  const handleDownloadTemplate = () => {
+    downloadTemplate<Employee>(
+      EMPLOYEE_COLUMNS,
+      'Mau_nhan_vien',
+      { employee_code: 'NV006', display_name: 'Nguyễn Văn F', full_name: 'Nguyễn Văn F', department_id: 'Lễ tân', job_title: 'Lễ tân', phone: '0901234567', start_date: '2024-01-15', status_id: 'Đang làm việc', has_leave: true, opening_leave_balance: 12, base_salary: 8000000 },
+    );
+  };
+
+  const handleExport = () => {
+    const rows = employees.map((e) => ({
+      ...e,
+      department_id: deptName(e.department_id),
+      status_id: statusName(e.status_id),
+    }));
+    exportToXlsx<Employee>(rows as Employee[], EMPLOYEE_COLUMNS, 'Danh_sach_nhan_vien');
+  };
+
+  const handleImportClick = () => fileInputRef.current?.click();
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const parsed = await parseXlsx<Employee>(file, EMPLOYEE_COLUMNS);
+      let count = 0;
+      setEmployees((prev) => {
+        const next = [...prev];
+        for (const row of parsed) {
+          if (!row.display_name || !String(row.display_name).trim()) continue;
+          const id = generateUniqueId('emp_');
+          const emp: Employee = {
+            id,
+            employee_code: String(row.employee_code || '').trim() || nextEmployeeCode(next),
+            display_name: String(row.display_name).trim(),
+            full_name: String(row.full_name || row.display_name).trim(),
+            department_id: resolveDeptId(String(row.department_id || ''), departments),
+            job_title: String(row.job_title || '').trim(),
+            phone: String(row.phone || '').trim(),
+            start_date: String(row.start_date || localDateStr()).trim(),
+            status_id: resolveStatusId(String(row.status_id || ''), statuses),
+            has_leave: !!row.has_leave,
+            opening_leave_balance: Number(row.opening_leave_balance) || 0,
+            user_id: null,
+            hotel_id: activeHotelId,
+            base_salary: Number(row.base_salary) || 0,
+          };
+          next.push(emp);
+          count++;
+        }
+        return next;
+      });
+      setImportMsg(`Đã nhập ${count} nhân viên.`);
+    } catch {
+      setImportMsg('Lỗi đọc file Excel. Vui lòng kiểm tra định dạng.');
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   return (
     <div className="px-8 pt-6 pb-8">
       {/* Page header with tabs */}
@@ -98,19 +191,36 @@ export default function EmployeesPage() {
             <Plus className="w-4 h-4" /> Thêm nhân viên
           </Button>
         </div>
-        <div className="mt-4 inline-flex gap-1 bg-primary-soft/30 border border-line/40 rounded-lg p-1">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
-                activeTab === tab.key ? 'bg-primary text-white shadow-sm' : 'text-info hover:text-ink'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div className="inline-flex gap-1 bg-primary-soft/30 border border-line/40 rounded-lg p-1">
+            {TABS.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  activeTab === tab.key ? 'bg-primary text-white shadow-sm' : 'text-info hover:text-ink'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 ml-auto">
+            <Button variant="secondary" size="sm" onClick={handleDownloadTemplate}>
+              <FileDown className="w-3.5 h-3.5" /> Tải File Mẫu
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleExport}>
+              <Download className="w-3.5 h-3.5" /> Xuất Excel
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleImportClick}>
+              <Upload className="w-3.5 h-3.5" /> Nhập Excel
+            </Button>
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImportFile} className="hidden" />
+          </div>
         </div>
+        {importMsg && (
+          <p className="mt-2 text-xs text-info">{importMsg}</p>
+        )}
       </div>
 
       {/* Filters */}

@@ -59,11 +59,11 @@ const DEFAULT_STATUSES: WorkStatus[] = [
 ];
 
 const DEFAULT_EMPLOYEES: Employee[] = [
-  { id: 'e1', employee_code: 'NV001', display_name: 'Nguyễn Văn An', full_name: 'Nguyễn Văn An', department_id: 'd1', job_title: 'Lễ tân', phone: '0901234567', start_date: '2024-01-15', status_id: 'w1', has_leave: true, opening_leave_balance: 12, user_id: null },
-  { id: 'e2', employee_code: 'NV002', display_name: 'Trần Thị Bình', full_name: 'Trần Thị Bình', department_id: 'd2', job_title: 'Nhân viên buồng phòng', phone: '0902345678', start_date: '2024-03-01', status_id: 'w1', has_leave: true, opening_leave_balance: 12, user_id: null },
-  { id: 'e3', employee_code: 'NV003', display_name: 'Lê Minh Cường', full_name: 'Lê Minh Cường', department_id: 'd3', job_title: 'Bếp trưởng', phone: '0903456789', start_date: '2023-06-10', status_id: 'w1', has_leave: true, opening_leave_balance: 12, user_id: null },
-  { id: 'e4', employee_code: 'NV004', display_name: 'Phạm Thị Dung', full_name: 'Phạm Thị Dung', department_id: 'd1', job_title: 'Trưởng ca lễ tân', phone: '0904567890', start_date: '2023-09-20', status_id: 'w1', has_leave: true, opening_leave_balance: 12, user_id: null },
-  { id: 'e5', employee_code: 'NV005', display_name: 'Hoàng Văn Em', full_name: 'Hoàng Văn Em', department_id: 'd4', job_title: 'Kỹ thuật', phone: '0905678901', start_date: '2024-05-05', status_id: 'w2', has_leave: true, opening_leave_balance: 6, user_id: null },
+  { id: 'e1', employee_code: 'NV001', display_name: 'Nguyễn Văn An', full_name: 'Nguyễn Văn An', department_id: 'd1', job_title: 'Lễ tân', phone: '0901234567', start_date: '2024-01-15', status_id: 'w1', has_leave: true, opening_leave_balance: 12, user_id: null, hotel_id: 'htl_01', base_salary: 0 },
+  { id: 'e2', employee_code: 'NV002', display_name: 'Trần Thị Bình', full_name: 'Trần Thị Bình', department_id: 'd2', job_title: 'Nhân viên buồng phòng', phone: '0902345678', start_date: '2024-03-01', status_id: 'w1', has_leave: true, opening_leave_balance: 12, user_id: null, hotel_id: 'htl_01', base_salary: 0 },
+  { id: 'e3', employee_code: 'NV003', display_name: 'Lê Minh Cường', full_name: 'Lê Minh Cường', department_id: 'd3', job_title: 'Bếp trưởng', phone: '0903456789', start_date: '2023-06-10', status_id: 'w1', has_leave: true, opening_leave_balance: 12, user_id: null, hotel_id: 'htl_01', base_salary: 0 },
+  { id: 'e4', employee_code: 'NV004', display_name: 'Phạm Thị Dung', full_name: 'Phạm Thị Dung', department_id: 'd1', job_title: 'Trưởng ca lễ tân', phone: '0904567890', start_date: '2023-09-20', status_id: 'w1', has_leave: true, opening_leave_balance: 12, user_id: null, hotel_id: 'htl_01', base_salary: 0 },
+  { id: 'e5', employee_code: 'NV005', display_name: 'Hoàng Văn Em', full_name: 'Hoàng Văn Em', department_id: 'd4', job_title: 'Kỹ thuật', phone: '0905678901', start_date: '2024-05-05', status_id: 'w2', has_leave: true, opening_leave_balance: 6, user_id: null, hotel_id: 'htl_01', base_salary: 0 },
 ];
 
 // ── Generic localStorage helpers ──────────────────────────────

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useRouter } from '@/router/RouterContext';
 import { useAuth } from '@/auth/AuthContext';
 import {
@@ -29,7 +29,22 @@ import {
   Building2,
   CheckCircle2,
   Lock,
+  Download,
+  Upload,
+  FileDown,
 } from 'lucide-react';
+import { exportToXlsx, downloadTemplate, parseXlsx, type SheetColumn } from '@/utils/xlsx';
+import { generateUniqueId } from '@/utils/idGenerator';
+
+type ImportableUser = User & { role: HotelRole; hotel_id: string };
+
+const USER_COLUMNS: SheetColumn<ImportableUser>[] = [
+  { key: 'username', label: 'Tên đăng nhập' },
+  { key: 'full_name', label: 'Họ tên' },
+  { key: 'password', label: 'Mật khẩu' },
+  { key: 'role', label: 'Vai trò' },
+  { key: 'hotel_id', label: 'Khách sạn' },
+];
 
 const PERMISSION_LEVELS: PermissionLevel[] = ['hidden', 'view', 'update', 'approve', 'delete'];
 const ALL_MODULES: FeatureModule[] = ['hrm', 'frontdesk', 'housekeeping', 'inventory', 'sales', 'system'];
@@ -269,6 +284,8 @@ export default function UserManagementPage() {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importMsg, setImportMsg] = useState('');
 
   const isSuperAdmin = currentUser?.is_super_admin === true;
   const activeHotelId = session?.activeHotelId ?? null;
@@ -355,6 +372,65 @@ export default function UserManagementPage() {
     deleteUser(id, actor);
   };
 
+  const handleDownloadTemplate = () => {
+    downloadTemplate<ImportableUser>(
+      USER_COLUMNS,
+      'Mau_nguoi_dung',
+      { username: 'nvan', full_name: 'Nguyễn Văn An', password: '123', role: 'staff', hotel_id: 'JGH' },
+    );
+  };
+
+  const handleExport = () => {
+    const hotelNameById = (id: string) => hotels.find((h) => h.id === id)?.code ?? id;
+    const rows: ImportableUser[] = users.map((u) => {
+      const map = mappings.find((m) => m.user_id === u.id);
+      return {
+        ...u,
+        role: map?.role ?? 'staff',
+        hotel_id: map ? hotelNameById(map.hotel_id) : '',
+      };
+    });
+    exportToXlsx<ImportableUser>(rows, USER_COLUMNS, 'Danh_sach_nguoi_dung');
+  };
+
+  const handleImportClick = () => fileInputRef.current?.click();
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const parsed = await parseXlsx<ImportableUser>(file, USER_COLUMNS);
+      let count = 0;
+      for (const row of parsed) {
+        const username = String(row.username || '').trim();
+        const fullName = String(row.full_name || '').trim();
+        const password = String(row.password || '').trim();
+        if (!username || !fullName || !password) continue;
+        const roleStr = String(row.role || '').trim().toLowerCase();
+        const role: HotelRole = roleStr.includes('admin') ? 'hotel_admin' : 'staff';
+        let targetHotelId = activeHotelId ?? '';
+        const rawHotel = String(row.hotel_id || '').trim();
+        if (rawHotel) {
+          const byId = hotels.find((h) => h.id === rawHotel);
+          const byCode = hotels.find((h) => h.code.toLowerCase() === rawHotel.toLowerCase());
+          const byName = hotels.find((h) => h.name.toLowerCase() === rawHotel.toLowerCase());
+          if (byId) targetHotelId = byId.id;
+          else if (byCode) targetHotelId = byCode.id;
+          else if (byName) targetHotelId = byName.id;
+        }
+        if (!targetHotelId) continue;
+        const perms = role === 'hotel_admin' ? HOTEL_ADMIN_PERMISSIONS : STAFF_PERMISSIONS;
+        const created = addUser({ username, password, full_name: fullName, is_super_admin: false }, actor);
+        setUserHotelMappings(created.id, [{ hotel_id: targetHotelId, role, permissions: perms }], actor);
+        count++;
+      }
+      setImportMsg(`Đã nhập ${count} người dùng.`);
+    } catch {
+      setImportMsg('Lỗi đọc file Excel. Vui lòng kiểm tra định dạng.');
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   // Hotels available for the modal: super admin sees all, hotel admin locked to their hotel
   const modalHotels = isSuperAdmin ? hotels : (activeHotelId ? hotels.filter((h) => h.id === activeHotelId) : []);
   const lockedHotelId = isSuperAdmin ? null : activeHotelId;
@@ -389,6 +465,23 @@ export default function UserManagementPage() {
             </Button>
           )}
         </div>
+        {canEdit && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={handleDownloadTemplate}>
+              <FileDown className="w-3.5 h-3.5" /> Tải File Mẫu
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleExport}>
+              <Download className="w-3.5 h-3.5" /> Xuất Excel
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleImportClick}>
+              <Upload className="w-3.5 h-3.5" /> Nhập Excel
+            </Button>
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImportFile} className="hidden" />
+          </div>
+        )}
+        {importMsg && (
+          <p className="mt-2 text-xs text-info">{importMsg}</p>
+        )}
       </div>
 
       <div className="bg-card rounded-xl border border-line/30 p-4 mb-4">
