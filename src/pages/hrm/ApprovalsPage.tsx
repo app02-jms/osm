@@ -7,8 +7,10 @@ import {
   useSchedules,
   genId,
 } from '@/hrm/store';
+import { useHrmPermission } from '@/hrm/usePermission';
 import type { ApprovalRequest, ApprovalStatus } from '@/hrm/types';
 import { Button, Badge, TextInput } from '@/components/ui';
+import { Lock } from 'lucide-react';
 import {
   FileCheck,
   CheckCircle2,
@@ -39,6 +41,8 @@ export default function ApprovalsPage() {
   const [schedules, setSchedules] = useSchedules();
   const [filter, setFilter] = useState<'pending' | 'all' | 'approved' | 'rejected'>('pending');
   const [rejectNote, setRejectNote] = useState<Record<string, string>>({});
+  const { can } = useHrmPermission();
+  const canApprove = can('hrm_attendance', 'approve');
 
   const empName = (id: string) => employees.find((e) => e.id === id)?.display_name ?? '—';
   const empCode = (id: string) => employees.find((e) => e.id === id)?.employee_code ?? '';
@@ -287,24 +291,31 @@ export default function ApprovalsPage() {
                   {/* Actions */}
                   <div className="lg:col-span-2 flex flex-col justify-start gap-2">
                     {req.status === 'pending' ? (
-                      <>
-                        <Button size="sm" onClick={() => handleApprove(req)} className="w-full">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Phê duyệt
-                        </Button>
-                        <div className="space-y-1.5">
-                          <TextInput
-                            placeholder="Ghi chú (tùy chọn)"
-                            value={rejectNote[req.id] || ''}
-                            onChange={(e) =>
-                              setRejectNote((prev) => ({ ...prev, [req.id]: e.target.value }))
-                            }
-                            className="text-xs"
-                          />
-                          <Button variant="danger" size="sm" onClick={() => handleReject(req)} className="w-full">
-                            <XCircle className="w-3.5 h-3.5" /> Từ chối
+                      canApprove ? (
+                        <>
+                          <Button size="sm" onClick={() => handleApprove(req)} className="w-full">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Phê duyệt
                           </Button>
+                          <div className="space-y-1.5">
+                            <TextInput
+                              placeholder="Ghi chú (tùy chọn)"
+                              value={rejectNote[req.id] || ''}
+                              onChange={(e) =>
+                                setRejectNote((prev) => ({ ...prev, [req.id]: e.target.value }))
+                            }
+                              className="text-xs"
+                            />
+                            <Button variant="danger" size="sm" onClick={() => handleReject(req)} className="w-full">
+                              <XCircle className="w-3.5 h-3.5" /> Từ chối
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-xs text-info">
+                          <Lock className="w-3.5 h-3.5" />
+                          <span>Chờ quản lý duyệt</span>
                         </div>
-                      </>
+                      )
                     ) : (
                       <div className="flex items-center gap-1.5 text-xs text-info">
                         <Clock className="w-3.5 h-3.5" />

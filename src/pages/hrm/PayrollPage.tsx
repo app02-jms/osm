@@ -11,6 +11,7 @@ import {
   computeWorkedHours,
   computeDailyOTHours,
 } from '@/hrm/store';
+import { useHrmPermission } from '@/hrm/usePermission';
 import type {
   TimesheetClosure,
   EmployeeSummary,
@@ -242,6 +243,9 @@ export default function PayrollPage() {
   const [departments] = useDepartments();
   const [shifts] = useShifts();
   const [leaveEntries] = useLeaveLedger();
+  const { can, getLevel, LEVEL_RANK } = useHrmPermission();
+  const canApprove = can('hrm_closures', 'approve');
+  const canDelete = can('hrm_closures', 'delete');
 
   // Phase 1 form state
   const now = new Date();
@@ -434,6 +438,18 @@ export default function PayrollPage() {
     showToast(true, 'Đã khóa kỳ công chính thức.');
   };
 
+  const handleReopen = () => {
+    if (!activeClosure) return;
+    setClosures((prev) =>
+      prev.map((c) =>
+        c.id === activeClosure.id
+          ? { ...c, status: 'draft' as ClosureStatus, locked_at: null }
+          : c
+      )
+    );
+    showToast(true, 'Đã mở khóa kỳ công.');
+  };
+
   const handleExportCSV = () => {
     if (activeClosure) exportCSV(activeClosure, employees, departments);
   };
@@ -472,9 +488,16 @@ export default function PayrollPage() {
             </div>
           </div>
           {isActiveLocked && (
-            <Button variant="secondary" onClick={handleExportCSV}>
-              <Download className="w-4 h-4" /> Xuất Excel/CSV
-            </Button>
+            <div className="flex items-center gap-2">
+              {canDelete && (
+                <Button variant="secondary" onClick={handleReopen}>
+                  <Unlock className="w-4 h-4" /> Mở khóa
+                </Button>
+              )}
+              <Button variant="secondary" onClick={handleExportCSV}>
+                <Download className="w-4 h-4" /> Xuất Excel/CSV
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -512,7 +535,7 @@ export default function PayrollPage() {
                   {timeRemaining > 0 && ` · Còn ${hoursRemaining}h ${minsRemaining}m`}
                 </p>
               </div>
-              <Button variant="danger" size="sm" onClick={handleLockNow}>
+              <Button variant="danger" size="sm" onClick={handleLockNow} disabled={!canApprove}>
                 <Lock className="w-3.5 h-3.5" /> Khóa ngay
               </Button>
             </>
@@ -531,7 +554,7 @@ export default function PayrollPage() {
       )}
 
       {/* Phase 1: Create draft controls (only when no active closure or locked) */}
-      {!activeClosure && (
+      {!activeClosure && canApprove && (
         <div className="bg-card rounded-xl border border-line/30 p-5 mb-4">
           <div className="flex items-center gap-2 mb-4">
             <CalendarRange className="w-4 h-4 text-primary" />
@@ -587,7 +610,7 @@ export default function PayrollPage() {
       )}
 
       {/* OT batch approve bar */}
-      {isActiveDraft && (
+      {isActiveDraft && canApprove && (
         <div className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             {previewSummaries.filter((s) => s.ot_approval_status === 'pending' && s.raw_ot_hours > 0).length > 0 && (
@@ -686,8 +709,8 @@ export default function PayrollPage() {
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                            {/* OT approve/reject (admin, draft only) */}
-                            {isActiveDraft && s.raw_ot_hours > 0 && s.ot_approval_status === 'pending' && (
+                            {/* OT approve/reject (approve level, draft only) */}
+                            {isActiveDraft && canApprove && s.raw_ot_hours > 0 && s.ot_approval_status === 'pending' && (
                               <>
                                 <button
                                   onClick={() => handleApproveOT(s.employee_id)}
@@ -751,7 +774,12 @@ export default function PayrollPage() {
 
       {/* Locked closure export */}
       {isActiveLocked && activeClosure && (
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex items-center justify-between">
+          {canDelete && (
+            <Button variant="secondary" onClick={handleReopen}>
+              <Unlock className="w-4 h-4" /> Mở khóa
+            </Button>
+          )}
           <Button variant="secondary" onClick={handleExportCSV}>
             <FileSpreadsheet className="w-4 h-4" /> Xuất Excel/CSV
           </Button>
