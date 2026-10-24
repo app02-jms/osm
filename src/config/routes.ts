@@ -23,7 +23,6 @@ import {
   Sliders,
   ShieldCheck,
   Hotel,
-  IdCard,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -230,12 +229,6 @@ export const ROUTES: Record<string, RouteConfig> = {
     icon: ShieldCheck,
     title: 'Quản lý Người dùng',
     subtitle: 'Quản lý tài khoản, phân quyền và vai trò người dùng.',
-  },
-  '/system/roles': {
-    path: '/system/roles',
-    icon: IdCard,
-    title: 'Quản lý Vai trò',
-    subtitle: 'Tạo mẫu vai trò với bộ phân quyền tái sử dụng cho người dùng.',
   },
   '/system/hotel-config': {
     path: '/system/hotel-config',
